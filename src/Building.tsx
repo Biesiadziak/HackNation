@@ -21,9 +21,10 @@ interface BuildingProps {
   selectedFloor: number | null;
   footprint?: [number, number][];
   levels?: number;
+  selectedId?: string | null;
 }
 
-export default function Building({ onSelect, firefighters, config, selectedFloor, footprint, levels = 3 }: BuildingProps) {
+export default function Building({ onSelect, firefighters, config, selectedFloor, footprint, levels = 3, selectedId }: BuildingProps) {
   // Generate floors: -1 (basement), 0 (ground), 1 to levels-1
   const floors = useMemo(() => {
       const f = [-1, 0];
@@ -74,6 +75,7 @@ export default function Building({ onSelect, firefighters, config, selectedFloor
           key={ff.firefighter.id}
           data={ff}
           onSelect={() => onSelect(ff.firefighter.id)}
+          isSelected={selectedId === ff.firefighter.id}
           config={config}
           selectedFloor={selectedFloor}
           getFloorZ={getFloorZ}
@@ -149,6 +151,8 @@ function AnimatedFloor({
           side={2} 
           transparent={true} 
           opacity={opacity}
+          roughness={1}
+          metalness={0}
         />
       </mesh>
       {/* Floor grid lines - only show if no footprint */}

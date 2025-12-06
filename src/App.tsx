@@ -4,13 +4,46 @@ import { useState, useEffect } from "react";
 import Building from "./Building";
 import LandingPage from "./LandingPage";
 import "./index.css";
+import "./controls.css";
+import "./alerts.css";
+import "./animations.css";
 import { getSnapshot } from "./state/firefighters";
 import { exportToCsv } from "./utils/exportData";
+
+interface Alert {
+  id: string;
+  type: string;
+  timestamp: string;
+  alert_type: string;
+  severity: 'critical' | 'warning' | 'info';
+  firefighter: {
+    id: string;
+    name: string;
+  };
+  details?: any;
+}
+
+const ALERT_TYPES: Record<string, string> = {
+  man_down: "Man Down (No Motion)",
+  sos_pressed: "SOS Button Pressed",
+  high_heart_rate: "High Heart Rate",
+  low_battery: "Low Battery",
+  scba_low_pressure: "SCBA Low Pressure",
+  scba_critical: "SCBA Critical Pressure",
+  beacon_offline: "Beacon Offline",
+  tag_offline: "Tag Offline",
+  high_temperature: "High Temperature",
+  high_co: "High CO Level",
+  low_oxygen: "Low Oxygen Level",
+  explosive_gas: "Explosive Gas Detected"
+};
 
 export default function App() {
   const [view, setView] = useState<'landing' | 'app'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [firefighters, setFirefighters] = useState<Record<string, any>>({});
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [listExpanded, setListExpanded] = useState(true);
   
   // Calibration State
   const [config, setConfig] = useState({
@@ -24,11 +57,24 @@ export default function App() {
   // Floor selection: null = overview, number = focused floor
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
 
-  const [address, setAddress] = useState("Złota 44, Warsaw, Poland");
+  const [address, setAddress] = useState("Wojskowa 10, Poznań, Poland");
   const [footprint, setFootprint] = useState<[number, number][] | undefined>(undefined);
   const [buildingLevels, setBuildingLevels] = useState<number>(3);
+  const [isLoading, setIsLoading] = useState(false);
+  const [weather, setWeather] = useState<any>(null);
+
+  const fetchWeather = async (lat: number, lon: number) => {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m`);
+      const data = await res.json();
+      setWeather(data.current);
+    } catch (e) {
+      console.error("Weather fetch failed", e);
+    }
+  };
 
   const fetchFootprint = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(`http://localhost:5000/footprint?address=${encodeURIComponent(address)}`);
       if (response.ok) {
@@ -37,6 +83,9 @@ export default function App() {
         if (data.levels) {
             setBuildingLevels(Math.round(data.levels));
         }
+        if (data.center) {
+            fetchWeather(data.center[0], data.center[1]);
+        }
       } else {
         console.error("Failed to fetch footprint");
         alert("Failed to fetch footprint");
@@ -44,6 +93,8 @@ export default function App() {
     } catch (error) {
       console.error("Error fetching footprint:", error);
       alert("Error fetching footprint");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,6 +110,21 @@ export default function App() {
                     ...prev,
                     [data.firefighter.id]: data
                 }));
+            } else if (data.type === 'alert') {
+                setAlerts(prev => {
+                    // Deduplicate: Check if we already have this alert type for this firefighter
+                    const exists = prev.some(a => 
+                        a.firefighter.id === data.firefighter.id && 
+                        a.alert_type === data.alert_type
+                    );
+                    if (exists) return prev;
+                    return [data, ...prev].slice(0, 2);
+                });
+                
+                // Auto-select firefighter in distress if critical
+                if (data.severity === 'critical') {
+                    setSelectedId(data.firefighter.id);
+                }
             }
         } catch(e) { console.error(e); }
     };
@@ -87,36 +153,83 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Alert Popups */}
+      <div className="alert-container">
+        {alerts.map(alert => (
+          <div key={alert.id} className={`alert-popup ${alert.severity}`}>
+            <div className="alert-icon">
+              {alert.severity === 'critical' ? '🚨' : '⚠️'}
+            </div>
+            <div className="alert-content">
+              <div className="alert-header">
+                <span className="alert-title">{ALERT_TYPES[alert.alert_type] || alert.alert_type}</span>
+                <span className="alert-time">{new Date(alert.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <div className="alert-message">
+                <strong>{alert.firefighter.name}</strong> ({alert.firefighter.id})
+              </div>
+              {alert.details && (
+                <div className="alert-details">
+                  {Object.entries(alert.details)
+                    .filter(([key]) => key !== 'imu_orientation')
+                    .map(([key, value]) => (
+                    <div key={key}>
+                        {key.replace(/_/g, ' ')}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button className="alert-close" onClick={() => setAlerts(prev => prev.filter(a => a.id !== alert.id))}>×</button>
+          </div>
+        ))}
+      </div>
+
       <button className="back-button" onClick={() => setView('landing')}>
         ← Go Back
       </button>
 
-      {/* Floor Selection Menu */}
-      <div className="floor-selector">
-        <label>Floor View:</label>
-        <select 
-          value={selectedFloor ?? 'all'} 
-          onChange={(e) => setSelectedFloor(e.target.value === 'all' ? null : parseInt(e.target.value))}
-        >
-          <option value="all">All Floors (Overview)</option>
-          <option value="-1">Floor -1 (Basement)</option>
-          <option value="0">Floor 0 (Ground)</option>
-          {Array.from({ length: Math.max(0, buildingLevels - 1) }, (_, i) => i + 1).map(floor => (
-             <option key={floor} value={floor}>Floor {floor}</option>
-          ))}
-        </select>
-        
-        <div style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
+      {weather && (
+        <div className="weather-panel">
+            <h3>Weather</h3>
+            <div className="weather-info">
+                <span>🌡️ {weather.temperature_2m}°C</span>
+                <span>💨 {weather.wind_speed_10m} km/h</span>
+            </div>
+        </div>
+      )}
+
+      {/* Controls Panel */}
+      <div className="controls-panel">
+        <div className="control-group">
+          <label>Building Address</label>
+          <div className="input-group">
             <input 
                 type="text" 
                 value={address} 
                 onChange={(e) => setAddress(e.target.value)} 
-                placeholder="Enter address"
-                style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc', color: 'black' }}
+                placeholder="Enter address..."
+                disabled={isLoading}
             />
-            <button onClick={fetchFootprint} style={{ padding: '5px 10px', cursor: 'pointer', color: 'black' }}>
-                Load
+            <button onClick={fetchFootprint} disabled={isLoading}>
+                {isLoading ? 'Loading...' : 'Load'}
             </button>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label>Floor View</label>
+          <select 
+            value={selectedFloor ?? 'all'} 
+            onChange={(e) => setSelectedFloor(e.target.value === 'all' ? null : parseInt(e.target.value))}
+          >
+            <option value="all">Overview (All Floors)</option>
+            <option value="-1">Basement (B1)</option>
+            <option value="0">Ground Floor (0)</option>
+            {Array.from({ length: Math.max(0, buildingLevels - 1) }, (_, i) => i + 1).map(floor => (
+               <option key={floor} value={floor}>Floor {floor}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -136,7 +249,12 @@ export default function App() {
               Object.values(firefighters).map((ff: any) => {
                 const isSelected = selectedId === ff.firefighter.id;
                 const heartRate = ff.vitals?.heart_rate_bpm;
-                const isAlert = heartRate > 120 || heartRate < 50;
+                
+                const roll = Math.abs(ff.imu?.orientation?.roll ?? 0);
+                const pitch = Math.abs(ff.imu?.orientation?.pitch ?? 0);
+                const isFallen = roll > 45 || pitch > 45;
+                
+                const isAlert = heartRate > 120 || heartRate < 50 || isFallen;
                 
                 // Calculate firefighter's floor
                 const rawZ = typeof ff.z === 'number' ? ff.z : (ff.position?.z ?? 0);
@@ -148,7 +266,7 @@ export default function App() {
                 return (
                   <div
                     key={ff.firefighter.id}
-                    className={`firefighter-list-item ${isSelected ? 'selected' : ''} ${isAlert ? 'alert' : ''}`}
+                    className={`firefighter-list-item ${isSelected ? 'selected' : ''} ${isFallen ? 'fallen' : (isAlert ? 'alert' : '')}`}
                     onClick={() => setSelectedId(ff.firefighter.id)}
                   >
                     <div className="ff-header">
@@ -161,6 +279,9 @@ export default function App() {
                     </div>
                     <div className="ff-scba">
                       🛡️ {ff.scba?.cylinder_pressure_bar?.toFixed(0) ?? '--'} bar
+                      <span className="scba-time">
+                        (⏳ {ff.scba?.cylinder_pressure_bar ? Math.round(ff.scba.cylinder_pressure_bar * 0.15) : '--'} min)
+                      </span>
                     </div>
                   </div>
                 );
@@ -172,15 +293,15 @@ export default function App() {
 
       {/* --- 3D Scene --- */}
       <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
-        <ambientLight intensity={0.4} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <directionalLight position={[-10, 20, -10]} intensity={0.5} />
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[-10, 20, 10]} intensity={0.8} />
         
         <axesHelper args={[5]} />
         
         <Building 
           firefighters={firefighters} 
           onSelect={setSelectedId} 
+          selectedId={selectedId}
           config={config}
           selectedFloor={selectedFloor}
           footprint={footprint}
@@ -201,12 +322,20 @@ export default function App() {
           </span></p>
           <p><strong>Heart Rate:</strong> <span>{selected.vitals?.heart_rate_bpm} bpm</span></p>
           <p><strong>State:</strong> <span>{selected.vitals?.motion_state}</span></p>
-          <p><strong>SCBA:</strong> <span>{selected.scba?.cylinder_pressure_bar?.toFixed(0) ?? 'N/A'} bar</span></p>
+          <p><strong>SCBA:</strong> <span>
+            {selected.scba?.cylinder_pressure_bar?.toFixed(0) ?? 'N/A'} bar
+            <span style={{color: '#aaa', marginLeft: '8px', fontSize: '0.9em'}}>
+                (⏳ {selected.scba?.cylinder_pressure_bar ? Math.round(selected.scba.cylinder_pressure_bar * 0.15) : '--'} min)
+            </span>
+          </span></p>
+          {(Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 || Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
+             <p style={{color: '#ff4757', fontWeight: 'bold', margin: '5px 0'}}>⚠️ FIREFIGHTER FALLEN</p>
+          )}
           <button onClick={() => setSelectedId(null)}>Close</button>
         </div>
       )}
 
-      <div style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 999 }}>
+      <div style={{ position: 'fixed', left: 180, bottom: 30, zIndex: 999 }}>
         <button onClick={async () => {
           const snap = getSnapshot();
           await exportToCsv(snap);

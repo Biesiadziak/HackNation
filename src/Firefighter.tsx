@@ -9,7 +9,8 @@ export default function Firefighter({
   config,
   selectedFloor,
   getFloorZ,
-  zOffset = 1.2
+  zOffset = 1.2,
+  isSelected = false
 }: {
   data: any;
   onSelect: () => void;
@@ -23,6 +24,7 @@ export default function Firefighter({
   selectedFloor: number | null;
   getFloorZ: (floor: number) => number;
   zOffset?: number;
+  isSelected?: boolean;
 }) {
   const ref = useRef<THREE.Sprite>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -65,6 +67,10 @@ export default function Firefighter({
   // Add offset so firefighter appears above the floor, not inside it
   const adjustedZ = baseZ + zOffset;
 
+  const roll = Math.abs(data.imu?.orientation?.roll ?? 0);
+  const pitch = Math.abs(data.imu?.orientation?.pitch ?? 0);
+  const isFallen = roll > 45 || pitch > 45;
+
   // Smoothly interpolate position with delta-time based lerp
   useFrame((state, delta) => {
     if (ref.current) {
@@ -93,20 +99,23 @@ export default function Firefighter({
       {/* Selection ring - billboarded to face camera */}
       <mesh
         ref={ringRef}
+        renderOrder={998}
         position={[x, y, adjustedZ]}
-        visible={hovered}
+        visible={hovered || isSelected}
       >
         <ringGeometry args={[1.4, 1.8, 32]} />
         <meshBasicMaterial 
-          color="#ffa502" 
+          color={isSelected ? "#00ff00" : "#ffa502"} 
           transparent 
           opacity={0.8}
           side={THREE.DoubleSide}
+          depthTest={false}
         />
       </mesh>
 
       <sprite
         ref={ref}
+        renderOrder={999}
         position={[x, y, adjustedZ]}
         scale={hovered ? [3, 3, 1] : [2.5, 2.5, 1]}
         onClick={(e) => {
@@ -125,8 +134,9 @@ export default function Firefighter({
       >
         <spriteMaterial 
           map={texture} 
+          color={isFallen ? "#ff4757" : "#ffffff"}
           transparent 
-          depthTest={true}
+          depthTest={false}
           depthWrite={false}
         />
       </sprite>
