@@ -1,72 +1,135 @@
-import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 import { registerFirefighter, recordPosition } from "./state/firefighters";
-
-const FLOOR_SIZE = 10;
-const FLOOR_HEIGHT = 4;
+import { useFrame, useLoader } from "@react-three/fiber";
 
 export default function Firefighter({
-  id,
-  floor,
-  onSelect
+  data,
+  onSelect,
+  config,
+  selectedFloor,
+  getFloorZ,
+  zOffset = 1.2
 }: {
-  id: string;
-  floor: number;
-  onSelect: (data: any) => void;
+  data: any;
+  onSelect: () => void;
+  config: {
+    scale: number;
+    swapYZ: boolean;
+    offsetX: number;
+    offsetY: number;
+    offsetZ: number;
+  };
+  selectedFloor: number | null;
+  getFloorZ: (floor: number) => number;
+  zOffset?: number;
 }) {
-  const ref = useRef<THREE.Mesh>(null!);
+  const ref = useRef<THREE.Sprite>(null!);
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const [hovered, setHovered] = useState(false);
 
-  // register this firefighter in the global store (include floor)
-  registerFirefighter(id, floor);
+  // Load the texture
+  const texture = useLoader(THREE.TextureLoader, '/firefighter_icon.png');
 
-  // Random velocity
-  const vel = useRef(
-    new THREE.Vector3(
-      (Math.random() - 0.5) * 0.02,
-      0,
-      (Math.random() - 0.5) * 0.02
-    )
-  );
+  // Raw data
+  const rawX = typeof data.x === 'number' ? data.x : (data.position?.x ?? 0);
+  const rawY = typeof data.y === 'number' ? data.y : (data.position?.y ?? 0);
+  const rawZ = typeof data.z === 'number' ? data.z : (data.position?.z ?? 0);
 
-  // Initial position
-  const [position] = useState(() => [
-    (Math.random() - 0.5) * FLOOR_SIZE,
-    floor * FLOOR_HEIGHT + 0.2,
-    (Math.random() - 0.5) * FLOOR_SIZE
-  ] as [number, number, number]);
+  // Apply calibration
+  let x = rawX * config.scale;
+  let y = rawY * config.scale;
+  let z = rawZ * config.scale;
 
-  useFrame(() => {
-    if (!ref.current) return;
-    ref.current.position.add(vel.current);
+  if (config.swapYZ) {
+    // If input is Z-up:
+    // Input X -> 3D X
+    // Input Y -> 3D Z (Depth)
+    // Input Z -> 3D Y (Height)
+    const tempY = y;
+    y = z;
+    z = tempY;
+  }
 
-    // record position snapshot
-    recordPosition(id, [ref.current.position.x, ref.current.position.y, ref.current.position.z]);
+  x += config.offsetX;
+  y += config.offsetY;
+  z += config.offsetZ;
 
-    // Bounce on edges
-    if (Math.abs(ref.current.position.x) > FLOOR_SIZE / 2)
-      vel.current.x *= -1;
-    if (Math.abs(ref.current.position.z) > FLOOR_SIZE / 2)
-      vel.current.z *= -1;
+  // When a floor is selected, adjust Z based on firefighter's floor
+  // Determine firefighter's floor based on Z position
+  const FLOOR_HEIGHT = 3.2;
+  const firefighterFloor = Math.round(z / FLOOR_HEIGHT);
+  const baseZ = selectedFloor !== null 
+    ? getFloorZ(firefighterFloor) + (z - firefighterFloor * FLOOR_HEIGHT) 
+    : z;
+  // Add offset so firefighter appears above the floor, not inside it
+  const adjustedZ = baseZ + zOffset;
+
+  // Smoothly interpolate position with delta-time based lerp
+  useFrame((state, delta) => {
+    if (ref.current) {
+      const targetPos = new THREE.Vector3(x, y, adjustedZ);
+      ref.current.position.lerp(targetPos, 1 - Math.pow(0.001, delta));
+    }
+    // Animate hover ring - make it face the camera (billboard effect)
+    if (ringRef.current) {
+      ringRef.current.position.set(
+        ref.current?.position.x ?? x,
+        ref.current?.position.y ?? y,
+        ref.current?.position.z ?? adjustedZ
+      );
+      // Make ring face the camera
+      ringRef.current.quaternion.copy(state.camera.quaternion);
+      // Pulse animation when hovered
+      if (hovered) {
+        const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.1;
+        ringRef.current.scale.setScalar(pulse);
+      }
+    }
   });
 
-  const handleClick = () => {
-    onSelect({
-      id,
-      heartRate: Math.floor(70 + Math.random() * 30),
-      temp: (36 + Math.random() * 2).toFixed(1),
-      oxygen: Math.floor(80 + Math.random() * 20)
-    });
-  };
-
   return (
-    <mesh
-      ref={ref}
-      onClick={handleClick}
-      position={position}
-    >
-      <sphereGeometry args={[0.25, 16, 16]} />
-      <meshStandardMaterial color="orange" />
-    </mesh>
+    <group>
+      {/* Selection ring - billboarded to face camera */}
+      <mesh
+        ref={ringRef}
+        position={[x, y, adjustedZ]}
+        visible={hovered}
+      >
+        <ringGeometry args={[1.4, 1.8, 32]} />
+        <meshBasicMaterial 
+          color="#ffa502" 
+          transparent 
+          opacity={0.8}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <sprite
+        ref={ref}
+        position={[x, y, adjustedZ]}
+        scale={hovered ? [3, 3, 1] : [2.5, 2.5, 1]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+      >
+        <spriteMaterial 
+          map={texture} 
+          transparent 
+          depthTest={true}
+          depthWrite={false}
+        />
+      </sprite>
+    </group>
   );
 }
