@@ -1,6 +1,8 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { registerFirefighter, recordPosition } from "./state/firefighters";
+import Movement from "./Movement";
 import Building from "./Building";
 import LandingPage from "./LandingPage";
 import "./index.css";
@@ -8,7 +10,7 @@ import { getSnapshot } from "./state/firefighters";
 import { exportToCsv } from "./utils/exportData";
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'app'>('landing');
+  const [view, setView] = useState<'landing' | 'app' | 'movement'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [firefighters, setFirefighters] = useState<Record<string, any>>({});
   
@@ -23,6 +25,46 @@ export default function App() {
 
   // Floor selection: null = overview, number = focused floor
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
+  const firefightersRef = useRef(firefighters);
+  const configRef = useRef(config);
+
+  useEffect(() => { firefightersRef.current = firefighters; }, [firefighters]);
+  useEffect(() => { configRef.current = config; }, [config]);
+
+  // Sampler: record positions once per second into the in-memory store
+  useEffect(() => {
+    const FLOOR_HEIGHT = 3.2;
+    const id = setInterval(() => {
+      const cur = firefightersRef.current;
+      const cfg = configRef.current;
+      Object.values(cur).forEach((ff: any) => {
+        const fid = ff.firefighter?.id ?? ff.id ?? null;
+        if (!fid) return;
+        const rawX = typeof ff.x === 'number' ? ff.x : (ff.position?.x ?? 0);
+        const rawY = typeof ff.y === 'number' ? ff.y : (ff.position?.y ?? 0);
+        const rawZ = typeof ff.z === 'number' ? ff.z : (ff.position?.z ?? 0);
+
+        let x = rawX * cfg.scale;
+        let y = rawY * cfg.scale;
+        let z = rawZ * cfg.scale;
+
+        if (cfg.swapYZ) {
+          const tempY = y;
+          y = z;
+          z = tempY;
+        }
+
+        x += cfg.offsetX;
+        y += cfg.offsetY;
+        z += cfg.offsetZ;
+
+        const ffFloor = Math.round(z / FLOOR_HEIGHT);
+        registerFirefighter(fid, ffFloor);
+        recordPosition(fid, [x, y, z]);
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const ws = new WebSocket('wss://niesmiertelnik.replit.app/ws');
@@ -60,6 +102,10 @@ export default function App() {
 
   if (view === 'landing') {
     return <LandingPage onStart={() => setView('app')} />;
+  }
+
+  if (view === 'movement') {
+    return <Movement onBack={() => setView('app')} />;
   }
 
   return (
@@ -123,9 +169,8 @@ export default function App() {
         <button onClick={async () => {
           const snap = getSnapshot();
           await exportToCsv(snap);
-          // optional: clear after export
-          // resetStore();
         }}>Export CSV</button>
+        <button style={{ marginLeft: 8 }} onClick={() => setView('movement')}>Open Movement</button>
       </div>
     </div>
   );

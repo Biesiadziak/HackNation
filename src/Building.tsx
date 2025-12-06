@@ -121,7 +121,8 @@ function AnimatedFloor({
       <mesh
         ref={meshRef}
         rotation={[0, 0, 0]}
-        position={[20, 10, targetZ]}
+        // center floors at origin so movement viewer and main view align
+        position={[0, 0, targetZ]}
       >
         <planeGeometry args={[FLOOR_SIZE, FLOOR_SIZE]} />
         <meshStandardMaterial 
@@ -134,12 +135,14 @@ function AnimatedFloor({
       {/* Floor grid lines */}
       <gridHelper 
         args={[FLOOR_SIZE, 10, "#ffffff", "#888888"]} 
-        position={[20, 10, targetZ + 0.05]}
+        // center the grid at origin on the floor plane
+        position={[0, 0, targetZ + 0.05]}
         rotation={[Math.PI / 2, 0, 0]}
       />
       {/* Floor label */}
       <Text
         ref={textRef}
+        // keep label offset relative to floor center
         position={[-3, -12, targetZ + 0.1]}
         fontSize={3}
         color={isSelected ? "#ffa502" : "#888888"}

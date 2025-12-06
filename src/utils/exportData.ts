@@ -15,13 +15,13 @@ export async function exportToCsv(snapshot: Record<string, { floor: number | nul
   }
 
   const lines: string[] = [];
-  // header
-  lines.push('id,floor,timestamp,x,y,z');
+  // header: id,x,y,z (one row per sample)
+  lines.push('id,x,y,z');
 
   for (const id of ids) {
-    const { floor, records } = snapshot[id];
+    const { records } = snapshot[id];
     for (const r of records) {
-      lines.push([id, floor ?? '', msToHMS(r.t), r.x, r.y, r.z].join(','));
+      lines.push([id, r.x, r.y, r.z].join(','));
     }
   }
 
