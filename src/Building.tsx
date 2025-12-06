@@ -1,6 +1,6 @@
 import { GroupProps, useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import * as THREE from "three";
 import Firefighter from "./Firefighter";
 
@@ -19,10 +19,19 @@ interface BuildingProps {
     offsetZ: number;
   };
   selectedFloor: number | null;
+  footprint?: [number, number][];
+  levels?: number;
 }
 
-export default function Building({ onSelect, firefighters, config, selectedFloor }: BuildingProps) {
-  const floors = [-1, 0, 1, 2];
+export default function Building({ onSelect, firefighters, config, selectedFloor, footprint, levels = 3 }: BuildingProps) {
+  // Generate floors: -1 (basement), 0 (ground), 1 to levels-1
+  const floors = useMemo(() => {
+      const f = [-1, 0];
+      for (let i = 1; i < levels; i++) {
+          f.push(i);
+      }
+      return f;
+  }, [levels]);
 
   // Calculate floor position based on selection
   const getFloorZ = (floorNum: number) => {
@@ -59,6 +68,7 @@ export default function Building({ onSelect, firefighters, config, selectedFloor
           targetZ={getFloorZ(i)}
           opacity={getFloorOpacity(i)}
           isSelected={i === selectedFloor}
+          footprint={footprint}
         />
       ))}
 
@@ -82,12 +92,14 @@ function AnimatedFloor({
   floorNum, 
   targetZ, 
   opacity, 
-  isSelected 
+  isSelected,
+  footprint
 }: { 
   floorNum: number; 
   targetZ: number; 
   opacity: number; 
   isSelected: boolean;
+  footprint?: [number, number][];
 }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const textRef = useRef<THREE.Mesh>(null!);
@@ -116,14 +128,25 @@ function AnimatedFloor({
 
   const floorLabel = floorNum === -1 ? "B1" : floorNum === 0 ? "G" : `F${floorNum}`;
 
+  const geometry = useMemo(() => {
+    if (footprint && footprint.length > 0) {
+      const shape = new THREE.Shape();
+      shape.moveTo(footprint[0][0], footprint[0][1]);
+      footprint.slice(1).forEach(p => shape.lineTo(p[0], p[1]));
+      return new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
+    }
+    return new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE);
+  }, [footprint]);
+
   return (
     <group>
       <mesh
         ref={meshRef}
         rotation={[0, 0, 0]}
         position={[20, 10, targetZ]}
+        geometry={geometry}
+        scale={footprint ? [3, 3, 1] : [1, 1, 1]}
       >
-        <planeGeometry args={[FLOOR_SIZE, FLOOR_SIZE]} />
         <meshStandardMaterial 
           color={isSelected ? "#ffcc80" : "#d4c4a8"}
           side={2} 
@@ -131,12 +154,14 @@ function AnimatedFloor({
           opacity={opacity}
         />
       </mesh>
-      {/* Floor grid lines */}
-      <gridHelper 
-        args={[FLOOR_SIZE, 10, "#ffffff", "#888888"]} 
-        position={[20, 10, targetZ + 0.05]}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
+      {/* Floor grid lines - only show if no footprint */}
+      {!footprint && (
+        <gridHelper 
+          args={[FLOOR_SIZE, 10, "#ffffff", "#888888"]} 
+          position={[20, 10, targetZ + 0.05]}
+          rotation={[Math.PI / 2, 0, 0]}
+        />
+      )}
       {/* Floor label */}
       <Text
         ref={textRef}
