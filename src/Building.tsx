@@ -39,17 +39,14 @@ export default function Building({ onSelect, firefighters, config, selectedFloor
       // Overview mode - normal stacking
       return floorNum * FLOOR_HEIGHT;
     }
-    // Focused mode - selected floor at base, upper floors spread out
-    if (floorNum < selectedFloor) {
-      // Lower floors stay in place but hidden
-      return floorNum * FLOOR_HEIGHT - 20;
-    } else if (floorNum === selectedFloor) {
-      // Selected floor at center
-      return 0;
-    } else {
-      // Upper floors move up with extra spacing
-      return (floorNum - selectedFloor) * (FLOOR_HEIGHT + 8);
+    
+    if (floorNum > selectedFloor) {
+      // Upper floors move up to create a viewing gap
+      return floorNum * FLOOR_HEIGHT + 20;
     }
+    
+    // Selected floor and lower floors stay at original height
+    return floorNum * FLOOR_HEIGHT;
   };
 
   const getFloorOpacity = (floorNum: number) => {

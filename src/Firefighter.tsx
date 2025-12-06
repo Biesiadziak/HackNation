@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import * as THREE from "three";
+import { registerFirefighter, recordPosition } from "./state/firefighters";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { Sprite } from "@react-three/drei";
 
 export default function Firefighter({
   data,

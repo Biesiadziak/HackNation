@@ -206,7 +206,6 @@ body {
   justify-content: space-between;
   align-items: center;
   margin: 2px 0;
-}
   font-size: 1.3rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   padding-bottom: 12px;
@@ -262,4 +261,140 @@ body {
     opacity: 1;
     transform: translateX(0) scale(1);
   }
+}
+
+/* Firefighter List Panel */
+.firefighter-list-panel {
+  position: absolute;
+  top: 80px;
+  left: 20px;
+  background: rgba(20, 20, 20, 0.9);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 15;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.firefighter-list-panel.expanded {
+  width: 260px;
+}
+
+.firefighter-list-panel.collapsed {
+  width: 50px;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s;
+}
+
+.list-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.list-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #ffa502;
+  white-space: nowrap;
+}
+
+.list-toggle {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.firefighter-list-panel.collapsed .list-header h3 {
+  display: none;
+}
+
+.list-content {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.no-firefighters {
+  color: #888;
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+.firefighter-list-item {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.firefighter-list-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 165, 2, 0.3);
+}
+
+.firefighter-list-item.selected {
+  background: rgba(255, 165, 2, 0.15);
+  border-color: #ffa502;
+}
+
+.firefighter-list-item.alert {
+  border-left: 3px solid #ff6b6b;
+}
+
+.ff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ff-name {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.ff-floor {
+  background: rgba(255, 165, 2, 0.2);
+  color: #ffa502;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ff-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-bottom: 2px;
+}
+
+.ff-heart {
+  color: #ff6b6b;
+}
+
+.ff-state {
+  color: #888;
+  text-transform: capitalize;
+}
+
+.ff-scba {
+  font-size: 0.8rem;
+  color: #4ecdc4;
 }
