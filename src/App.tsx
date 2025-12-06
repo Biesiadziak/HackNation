@@ -17,8 +17,10 @@ export default function App() {
     offsetX: 0,
     offsetY: 0,
     offsetZ: 0,
-    showSettings: false
   });
+
+  // Floor selection: null = overview, number = focused floor
+  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket('wss://niesmiertelnik.replit.app/ws');
@@ -41,6 +43,19 @@ export default function App() {
 
   const selected = selectedId ? firefighters[selectedId] : null;
 
+  // When a firefighter is selected, auto-focus on their floor
+  useEffect(() => {
+    if (selected) {
+      const rawZ = typeof selected.z === 'number' ? selected.z : (selected.position?.z ?? 0);
+      const z = rawZ * config.scale + config.offsetZ;
+      const FLOOR_HEIGHT = 3.2;
+      const firefighterFloor = Math.round(z / FLOOR_HEIGHT);
+      // Clamp to valid floor range
+      const clampedFloor = Math.max(-1, Math.min(2, firefighterFloor));
+      setSelectedFloor(clampedFloor);
+    }
+  }, [selectedId, selected, config.scale, config.offsetZ]);
+
   if (view === 'landing') {
     return <LandingPage onStart={() => setView('app')} />;
   }
@@ -50,47 +65,37 @@ export default function App() {
       <button className="back-button" onClick={() => setView('landing')}>
         ← Go Back
       </button>
-      
-      <button 
-        className="settings-button" 
-        onClick={() => setConfig(p => ({...p, showSettings: !p.showSettings}))}
-      >
-        ⚙️ Settings
-      </button>
 
-      {config.showSettings && (
-        <div className="settings-panel">
-          <h3>Calibration</h3>
-          <label>
-            Scale: <input type="number" step="0.1" value={config.scale} onChange={e => setConfig({...config, scale: parseFloat(e.target.value)})} />
-          </label>
-          <label>
-            <input type="checkbox" checked={config.swapYZ} onChange={e => setConfig({...config, swapYZ: e.target.checked})} />
-            Swap Y/Z (Z-up input)
-          </label>
-          <div className="offset-inputs">
-            <label>Off X: <input type="number" value={config.offsetX} onChange={e => setConfig({...config, offsetX: parseFloat(e.target.value)})} /></label>
-            <label>Off Y: <input type="number" value={config.offsetY} onChange={e => setConfig({...config, offsetY: parseFloat(e.target.value)})} /></label>
-            <label>Off Z: <input type="number" value={config.offsetZ} onChange={e => setConfig({...config, offsetZ: parseFloat(e.target.value)})} /></label>
-          </div>
-        </div>
-      )}
+      {/* Floor Selection Menu */}
+      <div className="floor-selector">
+        <label>Floor View:</label>
+        <select 
+          value={selectedFloor ?? 'all'} 
+          onChange={(e) => setSelectedFloor(e.target.value === 'all' ? null : parseInt(e.target.value))}
+        >
+          <option value="all">All Floors (Overview)</option>
+          <option value="-1">Floor -1 (Basement)</option>
+          <option value="0">Floor 0 (Ground)</option>
+          <option value="1">Floor 1</option>
+          <option value="2">Floor 2</option>
+        </select>
+      </div>
 
       <h1 className="app-title">3D Firefighter Localization</h1>
 
       {/* --- 3D Scene --- */}
-      <Canvas camera={{ position: [20, 30, 40], fov: 50 }}>
+      <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
         <ambientLight intensity={0.4} />
         <pointLight position={[10, 10, 10]} intensity={1} />
         <directionalLight position={[-10, 20, -10]} intensity={0.5} />
         
         <axesHelper args={[5]} />
-        <gridHelper args={[100, 100]} />
         
         <Building 
           firefighters={firefighters} 
           onSelect={setSelectedId} 
           config={config}
+          selectedFloor={selectedFloor}
         />
         <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} maxPolarAngle={Math.PI / 2} />
       </Canvas>

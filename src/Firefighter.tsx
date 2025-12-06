@@ -1,11 +1,15 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { Sprite } from "@react-three/drei";
 
 export default function Firefighter({
   data,
   onSelect,
-  config
+  config,
+  selectedFloor,
+  getFloorZ,
+  zOffset = 1.2
 }: {
   data: any;
   onSelect: () => void;
@@ -16,8 +20,16 @@ export default function Firefighter({
     offsetY: number;
     offsetZ: number;
   };
+  selectedFloor: number | null;
+  getFloorZ: (floor: number) => number;
+  zOffset?: number;
 }) {
-  const ref = useRef<THREE.Mesh>(null!);
+  const ref = useRef<THREE.Sprite>(null!);
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const [hovered, setHovered] = useState(false);
+
+  // Load the texture
+  const texture = useLoader(THREE.TextureLoader, '/firefighter_icon.png');
 
   // Raw data
   const rawX = typeof data.x === 'number' ? data.x : (data.position?.x ?? 0);
@@ -43,24 +55,81 @@ export default function Firefighter({
   y += config.offsetY;
   z += config.offsetZ;
 
-  // Smoothly interpolate position
-  useFrame(() => {
+  // When a floor is selected, adjust Z based on firefighter's floor
+  // Determine firefighter's floor based on Z position
+  const FLOOR_HEIGHT = 3.2;
+  const firefighterFloor = Math.round(z / FLOOR_HEIGHT);
+  const baseZ = selectedFloor !== null 
+    ? getFloorZ(firefighterFloor) + (z - firefighterFloor * FLOOR_HEIGHT) 
+    : z;
+  // Add offset so firefighter appears above the floor, not inside it
+  const adjustedZ = baseZ + zOffset;
+
+  // Smoothly interpolate position with delta-time based lerp
+  useFrame((state, delta) => {
     if (ref.current) {
-      ref.current.position.lerp(new THREE.Vector3(x, y, z), 0.1);
+      const targetPos = new THREE.Vector3(x, y, adjustedZ);
+      ref.current.position.lerp(targetPos, 1 - Math.pow(0.001, delta));
+    }
+    // Animate hover ring - make it face the camera (billboard effect)
+    if (ringRef.current) {
+      ringRef.current.position.set(
+        ref.current?.position.x ?? x,
+        ref.current?.position.y ?? y,
+        ref.current?.position.z ?? adjustedZ
+      );
+      // Make ring face the camera
+      ringRef.current.quaternion.copy(state.camera.quaternion);
+      // Pulse animation when hovered
+      if (hovered) {
+        const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.1;
+        ringRef.current.scale.setScalar(pulse);
+      }
     }
   });
 
   return (
-    <mesh
-      ref={ref}
-      position={[x, y, z]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-    >
-      <sphereGeometry args={[0.4, 32, 32]} />
-      <meshStandardMaterial color="orange" />
-    </mesh>
+    <group>
+      {/* Selection ring - billboarded to face camera */}
+      <mesh
+        ref={ringRef}
+        position={[x, y, adjustedZ]}
+        visible={hovered}
+      >
+        <ringGeometry args={[1.4, 1.8, 32]} />
+        <meshBasicMaterial 
+          color="#ffa502" 
+          transparent 
+          opacity={0.8}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <sprite
+        ref={ref}
+        position={[x, y, adjustedZ]}
+        scale={hovered ? [3, 3, 1] : [2.5, 2.5, 1]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+      >
+        <spriteMaterial 
+          map={texture} 
+          transparent 
+          depthTest={true}
+          depthWrite={false}
+        />
+      </sprite>
+    </group>
   );
 }
