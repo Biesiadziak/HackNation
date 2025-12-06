@@ -1,9 +1,11 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Stars, AxesHelper, GridHelper } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { useState, useEffect } from "react";
 import Building from "./Building";
 import LandingPage from "./LandingPage";
 import "./index.css";
+import { getSnapshot } from "./state/firefighters";
+import { exportToCsv } from "./utils/exportData";
 
 export default function App() {
   const [view, setView] = useState<'landing' | 'app'>('landing');
@@ -167,6 +169,15 @@ export default function App() {
           <button onClick={() => setSelectedId(null)}>Close</button>
         </div>
       )}
+
+      <div style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 999 }}>
+        <button onClick={async () => {
+          const snap = getSnapshot();
+          await exportToCsv(snap);
+          // optional: clear after export
+          // resetStore();
+        }}>Export CSV</button>
+      </div>
     </div>
   );
 }
