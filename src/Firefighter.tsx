@@ -1,64 +1,65 @@
-import { useFrame } from "@react-three/fiber";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import * as THREE from "three";
-
-const FLOOR_SIZE = 10;
-const FLOOR_HEIGHT = 4;
+import { useFrame } from "@react-three/fiber";
 
 export default function Firefighter({
-  id,
-  floor,
-  onSelect
+  data,
+  onSelect,
+  config
 }: {
-  id: string;
-  floor: number;
-  onSelect: (data: any) => void;
+  data: any;
+  onSelect: () => void;
+  config: {
+    scale: number;
+    swapYZ: boolean;
+    offsetX: number;
+    offsetY: number;
+    offsetZ: number;
+  };
 }) {
   const ref = useRef<THREE.Mesh>(null!);
 
-  // Random velocity
-  const vel = useRef(
-    new THREE.Vector3(
-      (Math.random() - 0.5) * 0.02,
-      0,
-      (Math.random() - 0.5) * 0.02
-    )
-  );
+  // Raw data
+  const rawX = typeof data.x === 'number' ? data.x : (data.position?.x ?? 0);
+  const rawY = typeof data.y === 'number' ? data.y : (data.position?.y ?? 0);
+  const rawZ = typeof data.z === 'number' ? data.z : (data.position?.z ?? 0);
 
-  // Initial position
-  const [position] = useState(() => [
-    (Math.random() - 0.5) * FLOOR_SIZE,
-    floor * FLOOR_HEIGHT + 0.2,
-    (Math.random() - 0.5) * FLOOR_SIZE
-  ] as [number, number, number]);
+  // Apply calibration
+  let x = rawX * config.scale;
+  let y = rawY * config.scale;
+  let z = rawZ * config.scale;
 
+  if (config.swapYZ) {
+    // If input is Z-up:
+    // Input X -> 3D X
+    // Input Y -> 3D Z (Depth)
+    // Input Z -> 3D Y (Height)
+    const tempY = y;
+    y = z;
+    z = tempY;
+  }
+
+  x += config.offsetX;
+  y += config.offsetY;
+  z += config.offsetZ;
+
+  // Smoothly interpolate position
   useFrame(() => {
-    if (!ref.current) return;
-    ref.current.position.add(vel.current);
-
-    // Bounce on edges
-    if (Math.abs(ref.current.position.x) > FLOOR_SIZE / 2)
-      vel.current.x *= -1;
-    if (Math.abs(ref.current.position.z) > FLOOR_SIZE / 2)
-      vel.current.z *= -1;
+    if (ref.current) {
+      ref.current.position.lerp(new THREE.Vector3(x, y, z), 0.1);
+    }
   });
-
-  const handleClick = () => {
-    onSelect({
-      id,
-      heartRate: Math.floor(70 + Math.random() * 30),
-      temp: (36 + Math.random() * 2).toFixed(1),
-      oxygen: Math.floor(80 + Math.random() * 20)
-    });
-  };
 
   return (
     <mesh
       ref={ref}
-      onClick={handleClick}
-      position={position}
+      position={[x, y, z]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect();
+      }}
     >
-      <sphereGeometry args={[0.25, 16, 16]} />
+      <sphereGeometry args={[0.4, 32, 32]} />
       <meshStandardMaterial color="orange" />
     </mesh>
   );
