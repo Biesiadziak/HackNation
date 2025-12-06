@@ -4,7 +4,7 @@ import { useState } from "react";
 import Building from "./Building";
 import "./index.css";
 import { getSnapshot, resetStore } from "./state/firefighters";
-import { exportPerFirefighter } from "./utils/exportData";
+import { exportToCsv } from "./utils/exportData";
 
 export default function App() {
   const [selected, setSelected] = useState<any>(null);
@@ -39,7 +39,7 @@ export default function App() {
       <div style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 999 }}>
         <button onClick={async () => {
           const snap = getSnapshot();
-          await exportPerFirefighter(snap);
+          await exportToCsv(snap);
           // optional: clear after export
           // resetStore();
         }}>Export CSV</button>
