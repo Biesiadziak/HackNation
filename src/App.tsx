@@ -40,6 +40,8 @@ const ALERT_TYPES: Record<string, string> = {
   explosive_gas: "Explosive Gas Detected"
 };
 
+import { getBuildingFootprint } from './utils/osm';
+
 export default function App() {
   const [view, setView] = useState<'landing' | 'app' | 'movement'>('landing');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -118,23 +120,17 @@ export default function App() {
   const fetchFootprint = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/footprint?address=${encodeURIComponent(address)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setFootprint(data.coords);
-        if (data.levels) {
-            setBuildingLevels(Math.round(data.levels));
-        }
-        if (data.center) {
-            fetchWeather(data.center[0], data.center[1]);
-        }
-      } else {
-        console.error("Failed to fetch footprint");
-        alert("Failed to fetch footprint");
+      const data = await getBuildingFootprint(address);
+      setFootprint(data.coords);
+      if (data.levels) {
+          setBuildingLevels(Math.round(data.levels));
+      }
+      if (data.center) {
+          fetchWeather(data.center[0], data.center[1]);
       }
     } catch (error) {
       console.error("Error fetching footprint:", error);
-      alert("Error fetching footprint");
+      alert("Error fetching footprint: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
