@@ -1,6 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import * as THREE from "three";
+import { registerFirefighter, recordPosition } from "./state/firefighters";
 
 const FLOOR_SIZE = 10;
 const FLOOR_HEIGHT = 4;
@@ -15,6 +16,9 @@ export default function Firefighter({
   onSelect: (data: any) => void;
 }) {
   const ref = useRef<THREE.Mesh>(null!);
+
+  // register this firefighter in the global store (include floor)
+  registerFirefighter(id, floor);
 
   // Random velocity
   const vel = useRef(
@@ -35,6 +39,9 @@ export default function Firefighter({
   useFrame(() => {
     if (!ref.current) return;
     ref.current.position.add(vel.current);
+
+    // record position snapshot
+    recordPosition(id, [ref.current.position.x, ref.current.position.y, ref.current.position.z]);
 
     // Bounce on edges
     if (Math.abs(ref.current.position.x) > FLOOR_SIZE / 2)
