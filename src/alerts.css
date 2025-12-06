@@ -1,0 +1,120 @@
+
+/* Alert Popup Styles */
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 400px;
+  pointer-events: none; /* Allow clicks to pass through empty space */
+}
+
+.alert-popup {
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 8px;
+  padding: 16px;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto; /* Re-enable clicks on the popup itself */
+  border-left: 4px solid transparent;
+}
+
+.alert-popup.critical {
+  border-left-color: #ff4757;
+  background: linear-gradient(90deg, rgba(255, 71, 87, 0.1) 0%, rgba(20, 20, 20, 0.95) 100%);
+}
+
+.alert-popup.warning {
+  border-left-color: #ffa502;
+  background: linear-gradient(90deg, rgba(255, 165, 2, 0.1) 0%, rgba(20, 20, 20, 0.95) 100%);
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.alert-title {
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alert-popup.critical .alert-title {
+  color: #ff4757;
+}
+
+.alert-popup.warning .alert-title {
+  color: #ffa502;
+}
+
+.alert-time {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.alert-message {
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.alert-details {
+  font-size: 0.9rem;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 10px;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.alert-close:hover {
+  color: #fff;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
