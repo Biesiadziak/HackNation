@@ -82,12 +82,14 @@ export default function Firefighter({
 
   // Visibility logic:
   // 1. If a specific floor is selected, fade out firefighters on other floors
-  // 2. If not selected, show all
+  // 2. If not selected (Overview), show all with X-Ray vision (depthTest=false)
   const isRelevantFloor = selectedFloor === null || firefighterFloor === selectedFloor;
-  const opacity = isRelevantFloor ? 1.0 : 0.1;
+  const opacity = isRelevantFloor ? 1.0 : 0.4;
   
-  // If not on relevant floor and not selected, maybe hide completely or keep very faint?
-  // Let's keep them faint so we know they exist.
+  // Enable depth test ONLY when we are focused on this specific floor.
+  // In overview mode (selectedFloor === null), we want X-Ray vision for everyone.
+  // On other floors, we want X-Ray vision (ghosts).
+  const depthTest = selectedFloor !== null && firefighterFloor === selectedFloor;
   
   // Smoothly interpolate position with delta-time based lerp
   useFrame((state, delta) => {
@@ -137,7 +139,7 @@ export default function Firefighter({
           transparent 
           opacity={0.8}
           side={THREE.DoubleSide}
-          depthTest={true} // Enable depth test so it doesn't shine through walls
+          depthTest={depthTest} // Enable depth test only for relevant floor
         />
       </mesh>
 
@@ -165,7 +167,7 @@ export default function Firefighter({
           color={iconColor}
           transparent 
           opacity={opacity}
-          depthTest={true} // Enable depth test so it doesn't shine through walls
+          depthTest={depthTest} // Enable depth test only for relevant floor
           depthWrite={false}
         />
       </sprite>
