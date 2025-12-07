@@ -18,65 +18,43 @@
 
     <div class="container">
         <section id="intro">
-            <h2>Wyzwanie</h2>
+            <h2>Cyfrowy Nieśmiertelnik</h2>
             <p>W gęstym dymie, wewnątrz płonącego budynku, GPS nie działa. Łączność radiowa bywa zawodna. Dowódca akcji często nie wie, gdzie dokładnie znajdują się jego ludzie ani w jakim są stanie. To "czarna dziura" informacyjna, która kosztuje życie.</p>
             <p><strong>Nasz cel:</strong> Zmienić to. Dać dowódcom oczy tam, gdzie wzrok nie sięga.</p>
-        </section>
-
-        <section id="solution">
-            <h2>Nasze Rozwiązanie</h2>
-            <p>Stworzyliśmy autonomiczny system lokalizacji i monitoringu 3D, który działa niezależnie od infrastruktury budynku. Łączymy dane z czujników inercyjnych (IMU), barometrów i modułów radiowych, aby precyzyjnie odwzorować pozycję strażaka w przestrzeni trójwymiarowej.</p>
-        </section>
-
-        <section id="features">
-            <h2>Kluczowe Funkcjonalności</h2>
-            <div class="features-grid">
-                <div class="feature">
-                    <h3>Lokalizacja 3D Indoor</h3>
-                    <p>Precyzyjne śledzenie pozycji X, Y oraz Z (piętro) bez użycia GPS. Widok rozbity na kondygnacje pozwala na szybką orientację w skomplikowanych strukturach budynków.</p>
-                </div>
-                <div class="feature">
-                    <h3>Monitoring Życia (Vitals)</h3>
-                    <p>Ciągły odczyt tętna i ciśnienia w butli z tlenem (SCBA). System estymuje pozostały czas pracy, pozwalając na bezpieczne wycofanie ratownika w odpowiednim momencie.</p>
-                </div>
-                <div class="feature">
-                    <h3>Wykrywanie "Man Down"</h3>
-                    <p>Automatyczne algorytmy wykrywające brak ruchu lub krytyczne parametry życiowe. Natychmiastowy alert wizualny dla dowódcy, umożliwiający błyskawiczną reakcję RIT (Rapid Intervention Team).</p>
-                </div>
-            </div>
+            <p>Projektujemy <strong>FlameTag</strong>, który łączy w sobie funkcje lokalizatora, czarnej skrzynki i monitora funkcji życiowych.</p>
         </section>
 
         <section id="gallery">
-            <h2>Ewolucja Systemu</h2>
+            <h2>Proces Tworzenia</h2>
             
             <div class="gallery-item">
                 <h3>1. Fundamenty Systemu</h3>
-                <p>Początki były surowe. Skupiliśmy się na matematyce i fizyce ruchu, tworząc prosty model 3D do kalibracji sensorów.</p>
+                <p>Na początku stworzyliśmy prostą wersję systemu wyświetlania 3D, aby przetestować podstawowe założenia.</p>
                 <img src="pics/screen_site_first_build.png" alt="Pierwsza wersja systemu">
             </div>
 
             <div class="gallery-item">
                 <h3>2. Wertykalność i Struktura</h3>
-                <p>Pożary nie są płaskie. Dodaliśmy obsługę wielopiętrowych budynków i rzutów kondygnacji, co jest kluczowe dla orientacji w wieżowcach.</p>
+                <p>Następnie dodaliśmy obsługę budynków i pięter, co pozwoliło nam na lokalizowanie strażaków w pionie – kluczowe w wieżowcach.</p>
                 <img src="pics/screen_site_3D_localisation.png" alt="Lokalizacja 3D">
             </div>
 
             <div class="gallery-item">
                 <h3>3. Interfejs Dowodzenia</h3>
-                <p>Przejrzystość to szybkość. Zaprojektowaliśmy interfejs tak, aby w stresie i chaosie akcji najważniejsze informacje (status, tlen, tętno) były widoczne na pierwszy rzut oka.</p>
+                <p>Kolejnym krokiem było zaprojektowanie czytelnego interfejsu, który pokazuje dowódcy najważniejsze parametry życiowe i status każdego strażaka.</p>
                 <img src="pics/screen_site_almost_finished.png" alt="Interfejs dowódcy">
             </div>
 
             <div class="gallery-item">
                 <h3>4. System Alertów Krytycznych</h3>
-                <p>Gdy liczą się sekundy. Czerwony alert "Man Down" dominuje ekran, nie pozwalając na przeoczenie zagrożenia życia strażaka.</p>
+                <p>Na koniec wdrożyliśmy system alertów. Gdy wykryjemy zagrożenie, ekran natychmiast informuje o niebezpieczeństwie, np. braku ruchu.</p>
                 <img src="pics/screen_alerts.png" alt="System Alertów">
             </div>
         </section>
 
         <section id="demo">
             <h2>System w Akcji</h2>
-            <p>Zobacz, jak nasz prototyp radzi sobie z wizualizacją ruchu i zdarzeń w czasie rzeczywistym.</p>
+            <p>Zobacz nagranie z działania prototypu systemu wizualizacji.</p>
             <div class="gallery-item">
                 <video controls width="100%" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     <source src="pics/2025-12-07 08-56-40.mkv" type="video/mp4">
@@ -87,7 +65,7 @@
 
         <section id="technical">
             <h2>Architektura Techniczna</h2>
-            <p>Solidne fundamenty dla krytycznej misji. Wykorzystujemy nowoczesne technologie webowe (React, Three.js) wsparte niezawodną komunikacją radiową/WebSocket.</p>
+            <p>Schemat połączeń między modułami noszonymi, stacją bazową (LoRa/GPS RTK) a aplikacją wizualizacyjną.</p>
             <div class="gallery-item tech-diagram">
                 <img src="pics/techincal_diagram.png" alt="Schemat techniczny">
             </div>
