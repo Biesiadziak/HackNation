@@ -86,10 +86,9 @@ export default function Firefighter({
   const isRelevantFloor = selectedFloor === null || firefighterFloor === selectedFloor;
   const opacity = isRelevantFloor ? 1.0 : 0.4;
   
-  // Enable depth test ONLY when we are focused on this specific floor.
-  // In overview mode (selectedFloor === null), we want X-Ray vision for everyone.
-  // On other floors, we want X-Ray vision (ghosts).
-  const depthTest = selectedFloor !== null && firefighterFloor === selectedFloor;
+  // Always disable depth test to ensure firefighters are visible through walls/floors
+  // This fixes the issue where looking "through" other floors would hide the firefighters on the selected floor.
+  const depthTest = false;
   
   // Smoothly interpolate position with delta-time based lerp
   useFrame((state, delta) => {

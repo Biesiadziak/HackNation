@@ -331,6 +331,13 @@ return (
                     <span className="ff-name">{ff.firefighter.name}</span>
                     <span className="ff-floor">{floorLabel}</span>
                   </div>
+                  {(ff.firefighter.rank || ff.firefighter.role) && (
+                    <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '4px' }}>
+                      {ff.firefighter.rank && <span>{ff.firefighter.rank}</span>}
+                      {ff.firefighter.rank && ff.firefighter.role && <span> • </span>}
+                      {ff.firefighter.role && <span>{ff.firefighter.role}</span>}
+                    </div>
+                  )}
                   <div className="ff-stats">
                     <span className="ff-heart">❤️ {heartRate ?? "--"}</span>
                     <span className="ff-state">{isManDown ? "MAN DOWN" : (ff.vitals?.motion_state ?? "--")}</span>
@@ -373,6 +380,16 @@ return (
         <p>
           <strong>ID:</strong> <span>{selected.firefighter.id}</span>
         </p>
+        {selected.firefighter.rank && (
+          <p>
+            <strong>Rank:</strong> <span>{selected.firefighter.rank}</span>
+          </p>
+        )}
+        {selected.firefighter.role && (
+          <p>
+            <strong>Role:</strong> <span>{selected.firefighter.role}</span>
+          </p>
+        )}
         <p>
           <strong>Pos:</strong>{" "}
           <span>
