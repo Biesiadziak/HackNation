@@ -147,10 +147,10 @@ export default function App() {
               (a) => a.firefighter.id === data.firefighter.id && a.alert_type === data.alert_type
             );
             if (exists) return prev;
-            return [data, ...prev].slice(0, 2);
+            return [data, ...prev].slice(0, 50);
           });
 
-          if (data.severity === "critical") setSelectedId(data.firefighter.id);
+          // if (data.severity === "critical") setSelectedId(data.firefighter.id);
         }
       } catch (e) {
         console.error(e);
@@ -194,6 +194,7 @@ export default function App() {
   }, [selectedId]);
 
 const firefighterPositions = useRef<Record<string, { x: number; y: number; z: number }[]>>({});
+const lastAlertTime = useRef<Record<string, number>>({});
 
 // Refs for interval access
 const firefightersRef = useRef(firefighters);
@@ -232,8 +233,12 @@ useEffect(() => {
       if (isStationary || isCriticalHR) {
          // Check if alert already exists
          const exists = currentAlerts.some(a => a.firefighter.id === id && a.alert_type === 'man_down');
+         const lastTime = lastAlertTime.current[id] || 0;
+         // 120s cooldown to prevent immediate re-alert after dismissal
+         const canAlert = !exists && (now - lastTime > 120000);
          
-         if (!exists) {
+         if (canAlert) {
+             lastAlertTime.current[id] = now;
              const newAlert: Alert = {
                  id: `local-${id}-${now}`,
                  type: 'alert',
@@ -248,15 +253,9 @@ useEffect(() => {
              };
              
              setAlerts(prev => {
-                 // Double check inside setter to be safe
                  if (prev.some(a => a.firefighter.id === id && a.alert_type === 'man_down')) return prev;
-                 return [newAlert, ...prev].slice(0, 2);
+                 return [newAlert, ...prev].slice(0, 50);
              });
-             
-             // Trigger focus if not already selected
-             if (selectedIdRef.current !== id) {
-                 setSelectedId(id);
-             }
          }
       }
     });
