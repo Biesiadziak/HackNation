@@ -25,10 +25,12 @@ export default function Movement({
   onBack,
   footprint,
   levels,
+  selectedFloor,
 }: {
   onBack: () => void;
   footprint?: [number, number][];
   levels?: number;
+  selectedFloor?: number | null;
 }) {
   const snap = getSnapshot();
   const ids = Object.keys(snap).sort();
@@ -97,7 +99,7 @@ export default function Movement({
           firefighters={{}} // no icons
           onSelect={() => {}}
           config={{ scale: 1, swapYZ: false, offsetX: 0, offsetY: 0, offsetZ: 0 }}
-          selectedFloor={null}
+          selectedFloor={selectedFloor ?? null}
           focusedFloors={undefined} // no floor movement
           footprint={footprint}
           levels={levels}

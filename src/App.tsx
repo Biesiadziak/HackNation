@@ -98,11 +98,32 @@ export default function App() {
           const y = data.y ?? data.position?.y ?? 0;
           const z = data.z ?? data.position?.z ?? 0;
 
-          // Update firefighter state
-          setFirefighters((prev) => ({ ...prev, [id]: data }));
+          // Update firefighter state with movement tracking
+          setFirefighters((prev) => {
+            const prevData = prev[id];
+            const now = Date.now();
+            let lastMoveTime = prevData?.lastMoveTime ?? now;
+
+            // Check if position changed significantly (> 0.1m)
+            if (prevData) {
+                const prevX = prevData.x ?? prevData.position?.x ?? 0;
+                const prevY = prevData.y ?? prevData.position?.y ?? 0;
+                const prevZ = prevData.z ?? prevData.position?.z ?? 0;
+                const dist = Math.sqrt(Math.pow(x - prevX, 2) + Math.pow(y - prevY, 2) + Math.pow(z - prevZ, 2));
+                
+                if (dist > 0.1) {
+                    lastMoveTime = now;
+                }
+            }
+
+            return {
+                ...prev,
+                [id]: { ...data, lastMoveTime }
+            };
+          });
 
           // Record movement
-  recordPosition(id, [x, y, z]);
+          recordPosition(id, [x, y, z]);
 
         } else if (data.type === "alert") {
           setAlerts((prev) => {
@@ -286,8 +307,17 @@ return (
               const heartRate = ff.vitals?.heart_rate_bpm;
               const roll = Math.abs(ff.imu?.orientation?.roll ?? 0);
               const pitch = Math.abs(ff.imu?.orientation?.pitch ?? 0);
-              const isFallen = roll > 45 || pitch > 45;
-              const isAlert = heartRate > 120 || heartRate < 50 || isFallen;
+              const isCrawling = roll > 45 || pitch > 45;
+              
+              // Man Down Logic: Stationary for > 30s OR Critical Heart Rate
+              const timeSinceMove = Date.now() - (ff.lastMoveTime ?? Date.now());
+              const isStationary = timeSinceMove > 30000;
+              const isCriticalHR = heartRate > 120 || heartRate < 40;
+              const isManDown = isStationary || isCriticalHR;
+              
+              // Alert logic: Man Down takes precedence
+              const itemClass = isManDown ? "alert" : (isCrawling ? "fallen" : "");
+
               const rawZ = typeof ff.z === "number" ? ff.z : ff.position?.z ?? 0;
               const z = rawZ * config.scale + config.offsetZ;
               const FLOOR_HEIGHT = 3.2;
@@ -297,9 +327,7 @@ return (
               return (
                 <div
                   key={ff.firefighter.id}
-                  className={`firefighter-list-item ${isSelected ? "selected" : ""} ${
-                    isFallen ? "fallen" : isAlert ? "alert" : ""
-                  }`}
+                  className={`firefighter-list-item ${isSelected ? "selected" : ""} ${itemClass}`}
                   onClick={() => setSelectedId(ff.firefighter.id)}
                 >
                   <div className="ff-header">
@@ -371,9 +399,13 @@ return (
             </span>
           </span>
         </p>
-        {(Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 ||
-          Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
-          <p style={{ color: "#ff4757", fontWeight: "bold", margin: "5px 0" }}>⚠️ FIREFIGHTER FALLEN</p>
+        {/* Status Indicators */}
+        {((selected.vitals?.heart_rate_bpm > 120 || selected.vitals?.heart_rate_bpm < 40) || (Date.now() - (selected.lastMoveTime ?? Date.now()) > 30000)) && (
+             <p style={{ color: "#ff4757", fontWeight: "bold", margin: "5px 0" }}>🚨 MAN DOWN / CRITICAL</p>
+        )}
+        {!((selected.vitals?.heart_rate_bpm > 120 || selected.vitals?.heart_rate_bpm < 40) || (Date.now() - (selected.lastMoveTime ?? Date.now()) > 30000)) && 
+         (Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 || Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
+          <p style={{ color: "#aaaaaa", fontWeight: "bold", margin: "5px 0" }}>ℹ️ CRAWLING / LOW PROFILE</p>
         )}
         <button onClick={() => setSelectedId(null)}>Close</button>
       </div>

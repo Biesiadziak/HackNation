@@ -69,7 +69,23 @@ export default function Firefighter({
 
   const roll = Math.abs(data.imu?.orientation?.roll ?? 0);
   const pitch = Math.abs(data.imu?.orientation?.pitch ?? 0);
-  const isFallen = roll > 45 || pitch > 45;
+  const isCrawling = roll > 45 || pitch > 45;
+  
+  // Man Down Logic
+  const heartRate = data.vitals?.heart_rate_bpm;
+  const isCriticalHR = heartRate > 120 || heartRate < 40;
+  const timeSinceMove = Date.now() - (data.lastMoveTime ?? Date.now());
+  const isStationary = timeSinceMove > 30000;
+  const isManDown = isCriticalHR || isStationary;
+  
+  let iconColor = "#ffffff";
+  if (isCrawling) {
+      iconColor = "#aaaaaa"; // Gray for crawling
+  }
+  
+  if (isManDown) {
+      iconColor = "#ff4757"; // Red for Man Down
+  }
 
   // Smoothly interpolate position with delta-time based lerp
   useFrame((state, delta) => {
@@ -134,7 +150,7 @@ export default function Firefighter({
       >
         <spriteMaterial 
           map={texture} 
-          color={isFallen ? "#ff4757" : "#ffffff"}
+          color={iconColor}
           transparent 
           depthTest={false}
           depthWrite={false}

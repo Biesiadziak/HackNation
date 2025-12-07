@@ -26,9 +26,15 @@ export function recordPosition(id: string, pos: [number, number, number]) {
 /**
  * Get a snapshot of all firefighter positions
  */
-export function getSnapshot(): Record<string, { records: PosRecord[] }> {
+export function getSnapshot(): Record<string, { floor: number | null; records: PosRecord[] }> {
   return Object.fromEntries(
-    Object.entries(store).map(([id, positions]) => [id, { records: positions }])
+    Object.entries(store).map(([id, positions]) => [
+      id, 
+      { 
+        floor: meta[id]?.floor ?? null, 
+        records: positions 
+      }
+    ])
   );
 }
 
