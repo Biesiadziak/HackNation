@@ -8,9 +8,9 @@ import "./index.css";
 import "./controls.css";
 import "./alerts.css";
 import "./animations.css";
-import { getSnapshot } from "./state/firefighters";
 import { exportToCsv } from "./utils/exportData";
 import { getBuildingFootprint } from "./utils/osm";
+import { registerFirefighter, recordPosition, getSnapshot } from './state/firefighters';
 
 interface Alert {
   id: string;
@@ -54,7 +54,6 @@ export default function App() {
   const [weather, setWeather] = useState<any>(null);
 
   // Firefighter position tracking for CSV
-  const firefighterPositions = useRef<Record<string, { x: number; y: number; z: number }[]>>({});
 
   // Fetch weather
   const fetchWeather = async (lat: number, lon: number) => {
@@ -103,8 +102,8 @@ export default function App() {
           setFirefighters((prev) => ({ ...prev, [id]: data }));
 
           // Record movement
-          if (!firefighterPositions.current[id]) firefighterPositions.current[id] = [];
-          firefighterPositions.current[id].push({ x, y, z });
+  recordPosition(id, [x, y, z]);
+
         } else if (data.type === "alert") {
           setAlerts((prev) => {
             const exists = prev.some(
@@ -138,13 +137,32 @@ export default function App() {
     }
   }, [selected, config.scale, config.offsetZ, buildingLevels]);
 
-  const handleExportCsv = () => {
-    const csvData: { id: string; x: number; y: number; z: number }[] = [];
-    Object.entries(firefighterPositions.current).forEach(([id, positions]) => {
-      positions.forEach((pos) => csvData.push({ id, x: pos.x, y: pos.y, z: pos.z }));
+const firefighterPositions = useRef<Record<string, { x: number; y: number; z: number }[]>>({});
+
+useEffect(() => {
+  const configRef = { scale: config.scale, swapYZ: config.swapYZ, offsetX: config.offsetX, offsetY: config.offsetY, offsetZ: config.offsetZ };
+  const interval = setInterval(() => {
+    Object.values(firefighters).forEach((ff: any) => {
+      const id = ff.firefighter?.id;
+      if (!id) return;
+      let x = (ff.x ?? ff.position?.x ?? 0) * configRef.scale + configRef.offsetX;
+      let y = (ff.y ?? ff.position?.y ?? 0) * configRef.scale + configRef.offsetY;
+      let z = (ff.z ?? ff.position?.z ?? 0) * configRef.scale + configRef.offsetZ;
+      if (configRef.swapYZ) [y, z] = [z, y];
+
+      if (!firefighterPositions.current[id]) firefighterPositions.current[id] = [];
+      firefighterPositions.current[id].push({ x, y, z });
+      recordPosition(id, [x, y, z]); // optional if you want to sync with state
     });
-    exportToCsv(csvData);
-  };
+  }, 1000);
+  return () => clearInterval(interval);
+}, [firefighters, config]);
+
+// --- CSV Export ---
+const handleExportCsv = async () => {
+  const snap = getSnapshot(); // now contains data
+  await exportToCsv(snap);
+};
 
   if (view === "landing") {
     return <LandingPage onStart={() => setView("app")} />;
@@ -161,214 +179,273 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="app-container">
-      {/* Export & Movement buttons above terrain */}
-      <div style={{ position: "fixed", top: 10, right: 10, zIndex: 999, display: "flex", gap: "10px" }}>
-        <button className="primary-btn" onClick={handleExportCsv}>
-          Export CSV
-        </button>
-        <button className="primary-btn" onClick={() => setView("movement")}>
-          Open Movement
-        </button>
-      </div>
-
-      {/* Alert popups */}
-      <div className="alert-container">
-        {alerts.map((alert) => (
-          <div key={alert.id} className={`alert-popup ${alert.severity}`}>
-            <div className="alert-icon">{alert.severity === "critical" ? "🚨" : "⚠️"}</div>
-            <div className="alert-content">
-              <div className="alert-header">
-                <span className="alert-title">{ALERT_TYPES[alert.alert_type] || alert.alert_type}</span>
-                <span className="alert-time">{new Date(alert.timestamp).toLocaleTimeString()}</span>
-              </div>
-              <div className="alert-message">
-                <strong>{alert.firefighter.name}</strong> ({alert.firefighter.id})
-              </div>
-              {alert.details && (
-                <div className="alert-details">
-                  {Object.entries(alert.details)
-                    .filter(([key]) => key !== "imu_orientation")
-                    .map(([key, value]) => (
-                      <div key={key}>
-                        {key.replace(/_/g, " ")}: {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                      </div>
-                    ))}
-                </div>
-              )}
+return (
+  <div className="app-container">
+    {/* Alert popups */}
+    <div className="alert-container">
+      {alerts.map((alert) => (
+        <div key={alert.id} className={`alert-popup ${alert.severity}`}>
+          <div className="alert-icon">{alert.severity === "critical" ? "🚨" : "⚠️"}</div>
+          <div className="alert-content">
+            <div className="alert-header">
+              <span className="alert-title">{ALERT_TYPES[alert.alert_type] || alert.alert_type}</span>
+              <span className="alert-time">{new Date(alert.timestamp).toLocaleTimeString()}</span>
             </div>
-            <button
-              className="alert-close"
-              onClick={() => setAlerts((prev) => prev.filter((a) => a.id !== alert.id))}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Go Back button */}
-      <button className="back-button" onClick={() => setView("landing")}>
-        ← Go Back
-      </button>
-
-      {/* Weather */}
-      {weather && (
-        <div className="weather-panel">
-          <h3>Weather</h3>
-          <div className="weather-info">
-            <span>🌡️ {weather.temperature_2m}°C</span>
-            <span>💨 {weather.wind_speed_10m} km/h</span>
-          </div>
-        </div>
-      )}
-
-      {/* Controls */}
-      <div className="controls-panel">
-        <div className="control-group">
-          <label>Building Address</label>
-          <div className="input-group">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter address..."
-              disabled={isLoading}
-            />
-            <button onClick={fetchFootprint} disabled={isLoading}>
-              {isLoading ? "Loading..." : "Load"}
-            </button>
-          </div>
-        </div>
-
-        <div className="control-group">
-          <label>Floor View</label>
-          <select
-            value={selectedFloor ?? "all"}
-            onChange={(e) => setSelectedFloor(e.target.value === "all" ? null : parseInt(e.target.value))}
-          >
-            <option value="all">Overview (All Floors)</option>
-            <option value="-1">Basement (B1)</option>
-            <option value="0">Ground Floor (0)</option>
-            {Array.from({ length: Math.max(0, buildingLevels - 1) }, (_, i) => i + 1).map((floor) => (
-              <option key={floor} value={floor}>
-                Floor {floor}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <h1 className="app-title">3D Firefighter Localization</h1>
-
-      {/* Firefighter list */}
-      <div className={`firefighter-list-panel ${listExpanded ? "expanded" : "collapsed"}`}>
-        <div className="list-header" onClick={() => setListExpanded(!listExpanded)}>
-          <span className="list-toggle">{listExpanded ? "◀" : "▶"}</span>
-          <h3>Firefighters ({Object.keys(firefighters).length})</h3>
-        </div>
-        {listExpanded && (
-          <div className="list-content">
-            {Object.values(firefighters).length === 0 ? (
-              <p className="no-firefighters">Waiting for data...</p>
-            ) : (
-              Object.values(firefighters).map((ff: any) => {
-                const isSelected = selectedId === ff.firefighter.id;
-                const heartRate = ff.vitals?.heart_rate_bpm;
-                const roll = Math.abs(ff.imu?.orientation?.roll ?? 0);
-                const pitch = Math.abs(ff.imu?.orientation?.pitch ?? 0);
-                const isFallen = roll > 45 || pitch > 45;
-                const isAlert = heartRate > 120 || heartRate < 50 || isFallen;
-                const rawZ = typeof ff.z === "number" ? ff.z : ff.position?.z ?? 0;
-                const z = rawZ * config.scale + config.offsetZ;
-                const FLOOR_HEIGHT = 3.2;
-                const ffFloor = Math.round(z / FLOOR_HEIGHT);
-                const floorLabel = ffFloor === -1 ? "B1" : ffFloor === 0 ? "G" : `F${ffFloor}`;
-
-                return (
-                  <div
-                    key={ff.firefighter.id}
-                    className={`firefighter-list-item ${isSelected ? "selected" : ""} ${
-                      isFallen ? "fallen" : isAlert ? "alert" : ""
-                    }`}
-                    onClick={() => setSelectedId(ff.firefighter.id)}
-                  >
-                    <div className="ff-header">
-                      <span className="ff-name">{ff.firefighter.name}</span>
-                      <span className="ff-floor">{floorLabel}</span>
+            <div className="alert-message">
+              <strong>{alert.firefighter.name}</strong> ({alert.firefighter.id})
+            </div>
+            {alert.details && (
+              <div className="alert-details">
+                {Object.entries(alert.details)
+                  .filter(([key]) => key !== "imu_orientation")
+                  .map(([key, value]) => (
+                    <div key={key}>
+                      {key.replace(/_/g, " ")}: {typeof value === "object" ? JSON.stringify(value) : String(value)}
                     </div>
-                    <div className="ff-stats">
-                      <span className="ff-heart">❤️ {heartRate ?? "--"}</span>
-                      <span className="ff-state">{ff.vitals?.motion_state ?? "--"}</span>
-                    </div>
-                    <div className="ff-scba">
-                      🛡️ {ff.scba?.cylinder_pressure_bar?.toFixed(0) ?? "--"} bar
-                      <span className="scba-time">
-                        (⏳ {ff.scba?.cylinder_pressure_bar ? Math.round(ff.scba.cylinder_pressure_bar * 0.15) : "--"} min)
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
+                  ))}
+              </div>
             )}
           </div>
-        )}
+          <button
+            className="alert-close"
+            onClick={() => setAlerts((prev) => prev.filter((a) => a.id !== alert.id))}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+
+    {/* Go Back button */}
+    <button className="back-button" onClick={() => setView("landing")}>
+      ← Go Back
+    </button>
+
+    {/* Weather */}
+    {weather && (
+      <div className="weather-panel">
+        <h3>Weather</h3>
+        <div className="weather-info">
+          <span>🌡️ {weather.temperature_2m}°C</span>
+          <span>💨 {weather.wind_speed_10m} km/h</span>
+        </div>
+      </div>
+    )}
+
+    {/* Controls */}
+    <div className="controls-panel">
+      <div className="control-group">
+        <label>Building Address</label>
+        <div className="input-group">
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Enter address..."
+            disabled={isLoading}
+          />
+          <button onClick={fetchFootprint} disabled={isLoading}>
+            {isLoading ? "Loading..." : "Load"}
+          </button>
+        </div>
       </div>
 
-      {/* 3D Scene */}
-      <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[-10, 20, 10]} intensity={0.8} />
-        <axesHelper args={[5]} />
-        <Building
-          firefighters={firefighters}
-          onSelect={setSelectedId}
-          selectedId={selectedId}
-          config={config}
-          selectedFloor={selectedFloor}
-          footprint={footprint}
-          levels={buildingLevels}
-        />
-        <OrbitControls enablePan enableZoom enableRotate maxPolarAngle={Math.PI / 2} />
-      </Canvas>
+      <div className="control-group">
+        <label>Floor View</label>
+        <select
+          value={selectedFloor ?? "all"}
+          onChange={(e) => setSelectedFloor(e.target.value === "all" ? null : parseInt(e.target.value))}
+        >
+          <option value="all">Overview (All Floors)</option>
+          <option value="-1">Basement (B1)</option>
+          <option value="0">Ground Floor (0)</option>
+          {Array.from({ length: Math.max(0, buildingLevels - 1) }, (_, i) => i + 1).map((floor) => (
+            <option key={floor} value={floor}>
+              Floor {floor}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
 
-      {/* Firefighter details panel */}
-      {selected && (
-        <div className="info-panel">
-          <h2>{selected.firefighter.name}</h2>
-          <p>
-            <strong>ID:</strong> <span>{selected.firefighter.id}</span>
-          </p>
-          <p>
-            <strong>Pos:</strong>{" "}
-            <span>
-              {selected.x?.toFixed(1) ?? selected.position?.x?.toFixed(1)},{" "}
-              {selected.y?.toFixed(1) ?? selected.position?.y?.toFixed(1)},{" "}
-              {selected.z?.toFixed(1) ?? selected.position?.z?.toFixed(1)}
-            </span>
-          </p>
-          <p>
-            <strong>Heart Rate:</strong> <span>{selected.vitals?.heart_rate_bpm} bpm</span>
-          </p>
-          <p>
-            <strong>State:</strong> <span>{selected.vitals?.motion_state}</span>
-          </p>
-          <p>
-            <strong>SCBA:</strong>{" "}
-            <span>
-              {selected.scba?.cylinder_pressure_bar?.toFixed(0) ?? "N/A"} bar
-              <span style={{ color: "#aaa", marginLeft: "8px", fontSize: "0.9em" }}>
-                (⏳ {selected.scba?.cylinder_pressure_bar ? Math.round(selected.scba.cylinder_pressure_bar * 0.15) : "--"} min)
-              </span>
-            </span>
-          </p>
-          {(Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 || Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
-            <p style={{ color: "#ff4757", fontWeight: "bold", margin: "5px 0" }}>⚠️ FIREFIGHTER FALLEN</p>
+    <h1 className="app-title">3D Firefighter Localization</h1>
+
+    {/* Firefighter list */}
+    <div className={`firefighter-list-panel ${listExpanded ? "expanded" : "collapsed"}`}>
+      <div className="list-header" onClick={() => setListExpanded(!listExpanded)}>
+        <span className="list-toggle">{listExpanded ? "◀" : "▶"}</span>
+        <h3>Firefighters ({Object.keys(firefighters).length})</h3>
+      </div>
+      {listExpanded && (
+        <div className="list-content">
+          {Object.values(firefighters).length === 0 ? (
+            <p className="no-firefighters">Waiting for data...</p>
+          ) : (
+            Object.values(firefighters).map((ff: any) => {
+              const isSelected = selectedId === ff.firefighter.id;
+              const heartRate = ff.vitals?.heart_rate_bpm;
+              const roll = Math.abs(ff.imu?.orientation?.roll ?? 0);
+              const pitch = Math.abs(ff.imu?.orientation?.pitch ?? 0);
+              const isFallen = roll > 45 || pitch > 45;
+              const isAlert = heartRate > 120 || heartRate < 50 || isFallen;
+              const rawZ = typeof ff.z === "number" ? ff.z : ff.position?.z ?? 0;
+              const z = rawZ * config.scale + config.offsetZ;
+              const FLOOR_HEIGHT = 3.2;
+              const ffFloor = Math.round(z / FLOOR_HEIGHT);
+              const floorLabel = ffFloor === -1 ? "B1" : ffFloor === 0 ? "G" : `F${ffFloor}`;
+
+              return (
+                <div
+                  key={ff.firefighter.id}
+                  className={`firefighter-list-item ${isSelected ? "selected" : ""} ${
+                    isFallen ? "fallen" : isAlert ? "alert" : ""
+                  }`}
+                  onClick={() => setSelectedId(ff.firefighter.id)}
+                >
+                  <div className="ff-header">
+                    <span className="ff-name">{ff.firefighter.name}</span>
+                    <span className="ff-floor">{floorLabel}</span>
+                  </div>
+                  <div className="ff-stats">
+                    <span className="ff-heart">❤️ {heartRate ?? "--"}</span>
+                    <span className="ff-state">{ff.vitals?.motion_state ?? "--"}</span>
+                  </div>
+                  <div className="ff-scba">
+                    🛡️ {ff.scba?.cylinder_pressure_bar?.toFixed(0) ?? "--"} bar
+                    <span className="scba-time">
+                      (⏳ {ff.scba?.cylinder_pressure_bar ? Math.round(ff.scba.cylinder_pressure_bar * 0.15) : "--"} min)
+                    </span>
+                  </div>
+                </div>
+              );
+            })
           )}
-          <button onClick={() => setSelectedId(null)}>Close</button>
         </div>
       )}
     </div>
-  );
+
+    {/* 3D Scene */}
+    <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[-10, 20, 10]} intensity={0.8} />
+      <axesHelper args={[5]} />
+      <Building
+        firefighters={firefighters}
+        onSelect={setSelectedId}
+        selectedId={selectedId}
+        config={config}
+        selectedFloor={selectedFloor}
+        footprint={footprint}
+        levels={buildingLevels}
+      />
+      <OrbitControls enablePan enableZoom enableRotate maxPolarAngle={Math.PI / 2} />
+    </Canvas>
+
+    {/* Firefighter details panel */}
+    {selected && (
+      <div className="info-panel">
+        <h2>{selected.firefighter.name}</h2>
+        <p>
+          <strong>ID:</strong> <span>{selected.firefighter.id}</span>
+        </p>
+        <p>
+          <strong>Pos:</strong>{" "}
+          <span>
+            {selected.x?.toFixed(1) ?? selected.position?.x?.toFixed(1)},{" "}
+            {selected.y?.toFixed(1) ?? selected.position?.y?.toFixed(1)},{" "}
+            {selected.z?.toFixed(1) ?? selected.position?.z?.toFixed(1)}
+          </span>
+        </p>
+        <p>
+          <strong>Heart Rate:</strong> <span>{selected.vitals?.heart_rate_bpm} bpm</span>
+        </p>
+        <p>
+          <strong>State:</strong> <span>{selected.vitals?.motion_state}</span>
+        </p>
+        <p>
+          <strong>SCBA:</strong>{" "}
+          <span>
+            {selected.scba?.cylinder_pressure_bar?.toFixed(0) ?? "N/A"} bar
+            <span style={{ color: "#aaa", marginLeft: "8px", fontSize: "0.9em" }}>
+              (⏳ {selected.scba?.cylinder_pressure_bar ? Math.round(selected.scba.cylinder_pressure_bar * 0.15) : "--"} min)
+            </span>
+          </span>
+        </p>
+        {(Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 ||
+          Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
+          <p style={{ color: "#ff4757", fontWeight: "bold", margin: "5px 0" }}>⚠️ FIREFIGHTER FALLEN</p>
+        )}
+        <button onClick={() => setSelectedId(null)}>Close</button>
+      </div>
+    )}
+
+    {/* Pretty buttons at bottom-right */}
+    <div
+      style={{
+        position: "fixed",
+        bottom: 250,
+        right: 20,
+        zIndex: 999,
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+      }}
+    >
+      <button
+        className="primary-btn"
+        style={{
+          padding: "10px 16px",
+          fontSize: "1rem",
+          borderRadius: "8px",
+          background: "linear-gradient(90deg, #ff6b6b, #ff8787)",
+          border: "none",
+          color: "#fff",
+          fontWeight: "bold",
+          cursor: "pointer",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
+          transition: "transform 0.1s ease, box-shadow 0.1s ease",
+        }}
+        onClick={handleExportCsv}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 10px rgba(0,0,0,0.25)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 6px rgba(0,0,0,0.2)";
+        }}
+      >
+        Export CSV
+      </button>
+
+      <button
+        className="primary-btn"
+        style={{
+          padding: "10px 16px",
+          fontSize: "1rem",
+          borderRadius: "8px",
+          background: "linear-gradient(90deg, #54a0ff, #70c1ff)",
+          border: "none",
+          color: "#fff",
+          fontWeight: "bold",
+          cursor: "pointer",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
+          transition: "transform 0.1s ease, box-shadow 0.1s ease",
+        }}
+        onClick={() => setView("movement")}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 10px rgba(0,0,0,0.25)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 6px rgba(0,0,0,0.2)";
+        }}
+      >
+        Open Movement
+      </button>
+    </div>
+  </div>
+);
+
 }
