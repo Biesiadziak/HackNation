@@ -3,105 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prezentacja Systemu HackNation</title>
+    <title>HackNation - System Bezpieczeństwa Strażaków</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
+    <header class="hero">
         <div class="container">
-            <h1>System HackNation</h1>
-            <p>Podróż od Koncepcji do Rzeczywistości</p>
+            <h1>HackNation</h1>
+            <p class="quote">"Ratują innych, ryzykując własne życie. Czas, by technologia pomogła im w tym zadaniu."</p>
+            <p class="sub-quote">Stwórz rozwiązanie, które zwiększy bezpieczeństwo strażaków – nawet tam, gdzie nie ma sieci ani sygnału GPS.</p>
         </div>
     </header>
 
     <div class="container">
         <section id="intro">
-            <h2>O Projekcie</h2>
-            <p>Witamy w prezentacji naszego systemu lokalizacji i wizualizacji 3D. Projekt ten ma na celu zapewnienie śledzenia w czasie rzeczywistym i świadomości sytuacyjnej dla służb ratunkowych. Poniżej przedstawiamy historię powstania tego systemu, od pierwszych linii kodu do w pełni funkcjonalnego interfejsu 3D.</p>
+            <h2>Wyzwanie</h2>
+            <p>W gęstym dymie, wewnątrz płonącego budynku, GPS nie działa. Łączność radiowa bywa zawodna. Dowódca akcji często nie wie, gdzie dokładnie znajdują się jego ludzie ani w jakim są stanie. To "czarna dziura" informacyjna, która kosztuje życie.</p>
+            <p><strong>Nasz cel:</strong> Zmienić to. Dać dowódcom oczy tam, gdzie wzrok nie sięga.</p>
         </section>
 
-        <section id="phase1">
-            <h2>Faza 1: Fundamenty</h2>
-            <p>Prace nad projektem rozpoczęliśmy od podstaw. Nasza pierwsza wersja była skromna — prosty widok 3D wypełniony losowo rozmieszczonymi kulami, aby ustalić układ współrzędnych i przetestować podstawowy silnik renderujący.</p>
-            <div class="gallery-item">
-                <img src="pics/screen_site_first_build.png" alt="Ekran Pierwszej Wersji">
-                <div class="caption">Początkowy widok 3D: Losowo rozmieszczone sfery przygotowujące grunt pod to, co miało nadejść.</div>
+        <section id="solution">
+            <h2>Nasze Rozwiązanie</h2>
+            <p>Stworzyliśmy autonomiczny system lokalizacji i monitoringu 3D, który działa niezależnie od infrastruktury budynku. Łączymy dane z czujników inercyjnych (IMU), barometrów i modułów radiowych, aby precyzyjnie odwzorować pozycję strażaka w przestrzeni trójwymiarowej.</p>
+        </section>
+
+        <section id="features">
+            <h2>Kluczowe Funkcjonalności</h2>
+            <div class="features-grid">
+                <div class="feature">
+                    <h3>Lokalizacja 3D Indoor</h3>
+                    <p>Precyzyjne śledzenie pozycji X, Y oraz Z (piętro) bez użycia GPS. Widok rozbity na kondygnacje pozwala na szybką orientację w skomplikowanych strukturach budynków.</p>
+                </div>
+                <div class="feature">
+                    <h3>Monitoring Życia (Vitals)</h3>
+                    <p>Ciągły odczyt tętna i ciśnienia w butli z tlenem (SCBA). System estymuje pozostały czas pracy, pozwalając na bezpieczne wycofanie ratownika w odpowiednim momencie.</p>
+                </div>
+                <div class="feature">
+                    <h3>Wykrywanie "Man Down"</h3>
+                    <p>Automatyczne algorytmy wykrywające brak ruchu lub krytyczne parametry życiowe. Natychmiastowy alert wizualny dla dowódcy, umożliwiający błyskawiczną reakcję RIT (Rapid Intervention Team).</p>
+                </div>
             </div>
         </section>
 
-        <section id="phase2">
-            <h2>Faza 2: Wejście w Trzeci Wymiar</h2>
-            <p>Sercem naszego projektu jest lokalizacja 3D. Rozpoczęliśmy renderowanie budynków i struktur w 3D, umożliwiając śledzenie w pionie — kluczowe dla operacji w budynkach wielokondygnacyjnych.</p>
+        <section id="gallery">
+            <h2>Ewolucja Systemu</h2>
+            
             <div class="gallery-item">
+                <h3>1. Fundamenty Systemu</h3>
+                <p>Początki były surowe. Skupiliśmy się na matematyce i fizyce ruchu, tworząc prosty model 3D do kalibracji sensorów.</p>
+                <img src="pics/screen_site_first_build.png" alt="Pierwsza wersja systemu">
+            </div>
+
+            <div class="gallery-item">
+                <h3>2. Wertykalność i Struktura</h3>
+                <p>Pożary nie są płaskie. Dodaliśmy obsługę wielopiętrowych budynków i rzutów kondygnacji, co jest kluczowe dla orientacji w wieżowcach.</p>
                 <img src="pics/screen_site_3D_localisation.png" alt="Lokalizacja 3D">
-                <div class="caption">Lokalizacja 3D: Dodanie głębi i wertykalności do śledzenia.</div>
             </div>
-        </section>
 
-        <section id="phase3">
-            <h2>Faza 3: Budowa Interfejsu i Monitorowanie Strażaków</h2>
-            <p>Mając ustalony świat 3D, skupiliśmy się na interfejsie. Wprowadziliśmy ikony strażaków oraz panel wyświetlający kluczowe dane, takie jak tętno i status, wizualizując strażaków w systemie.</p>
             <div class="gallery-item">
-                <img src="pics/screen_site_without_building.png" alt="Strona bez budynku">
-                <div class="caption">Wczesny interfejs pokazujący ikony strażaków i parametry życiowe, takie jak tętno i stan.</div>
+                <h3>3. Interfejs Dowodzenia</h3>
+                <p>Przejrzystość to szybkość. Zaprojektowaliśmy interfejs tak, aby w stresie i chaosie akcji najważniejsze informacje (status, tlen, tętno) były widoczne na pierwszy rzut oka.</p>
+                <img src="pics/screen_site_almost_finished.png" alt="Interfejs dowódcy">
             </div>
-        </section>
 
-        <section id="phase4">
-            <h2>Faza 4: Śledzenie Ruchu</h2>
-            <p>Statyczne punkty są użyteczne, ale to ruch opowiada historię. Zaimplementowaliśmy śledzenie trajektorii, aby wizualizować ścieżkę przebytą przez strażaków w czasie.</p>
             <div class="gallery-item">
-                <img src="pics/screen_site_trajectories.png" alt="Trajektorie">
-                <div class="caption">Wczesne testy trajektorii.</div>
-            </div>
-            <div class="gallery-item">
-                <img src="pics/screen_site_trajectories_final.png" alt="Finalne Trajektorie">
-                <div class="caption">Udoskonalone trajektorie: Płynne i informacyjne ścieżki.</div>
-            </div>
-        </section>
-
-        <section id="phase5">
-            <h2>Faza 5: Dopracowanie Doświadczenia</h2>
-            <p>Zbliżając się do końca, skupiliśmy się na interfejsie użytkownika, zapewniając łatwy dostęp do kluczowych informacji bez zaśmiecania widoku.</p>
-            <div class="gallery-item">
-                <img src="pics/screen_site_almost_finished.png" alt="Prawie Skończone">
-                <div class="caption">Prawie finalny interfejs: Czysty, funkcjonalny i potężny.</div>
-            </div>
-        </section>
-
-        <section id="phase6">
-            <h2>Faza 6: Alerty Krytyczne</h2>
-            <p>Bezpieczeństwo jest najważniejsze. Zintegrowaliśmy system alertów w czasie rzeczywistym, aby natychmiast powiadamiać dowódców o zdarzeniach krytycznych, takich jak "Man Down" czy wysokie tętno, zapewniając szybką reakcję.</p>
-            <div class="gallery-item">
+                <h3>4. System Alertów Krytycznych</h3>
+                <p>Gdy liczą się sekundy. Czerwony alert "Man Down" dominuje ekran, nie pozwalając na przeoczenie zagrożenia życia strażaka.</p>
                 <img src="pics/screen_alerts.png" alt="System Alertów">
-                <div class="caption">System Alertów: Natychmiastowe powiadomienia wizualne o krytycznym stanie strażaka.</div>
             </div>
         </section>
 
         <section id="demo">
             <h2>System w Akcji</h2>
-            <p>Zobacz system w ruchu. To nagranie przedstawia aktualizacje w czasie rzeczywistym i płynne interakcje finalnej wersji.</p>
+            <p>Zobacz, jak nasz prototyp radzi sobie z wizualizacją ruchu i zdarzeń w czasie rzeczywistym.</p>
             <div class="gallery-item">
                 <video controls width="100%" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     <source src="pics/2025-12-07 08-56-40.mkv" type="video/mp4">
                     Twoja przeglądarka nie obsługuje tagu wideo.
                 </video>
-                <div class="caption">Nagranie demonstracyjne na żywo.</div>
             </div>
         </section>
 
         <section id="technical">
-            <h2>Pod Maską</h2>
-            <p>Nasz system jest zbudowany na solidnej architekturze zaprojektowanej z myślą o niezawodności i szybkości. Oto spojrzenie na interakcję komponentów.</p>
+            <h2>Architektura Techniczna</h2>
+            <p>Solidne fundamenty dla krytycznej misji. Wykorzystujemy nowoczesne technologie webowe (React, Three.js) wsparte niezawodną komunikacją radiową/WebSocket.</p>
             <div class="gallery-item tech-diagram">
-                <img src="pics/techincal_diagram.png" alt="Diagram Techniczny">
-                <div class="caption">Diagram Architektury Systemu.</div>
+                <img src="pics/techincal_diagram.png" alt="Schemat techniczny">
             </div>
         </section>
     </div>
 
     <footer>
-        <p>&copy; 2025 Zespół HackNation. Zbudowane z pasją.</p>
+        <p>&copy; 2025 HackNation Team. Technologia w służbie życia.</p>
     </footer>
 
     <div id="lightbox" class="lightbox">
