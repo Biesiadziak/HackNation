@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useState, useEffect, useRef } from "react";
+import * as THREE from "three";
 import Building from "./Building";
 import LandingPage from "./LandingPage";
 import Movement from "./Movement";
@@ -11,6 +12,17 @@ import "./animations.css";
 import { exportToCsv } from "./utils/exportData";
 import { getBuildingFootprint } from "./utils/osm";
 import { registerFirefighter, recordPosition, getSnapshot } from './state/firefighters';
+
+// Helper to set initial camera target without resetting it on every render
+function CameraHandler({ initialTarget, controlsRef }: { initialTarget?: [number, number, number], controlsRef: any }) {
+  useEffect(() => {
+    if (controlsRef.current && initialTarget) {
+      controlsRef.current.target.set(...initialTarget);
+      controlsRef.current.update();
+    }
+  }, []); // Run only on mount
+  return null;
+}
 
 interface Alert {
   id: string;
@@ -52,6 +64,10 @@ export default function App() {
   const [buildingLevels, setBuildingLevels] = useState<number>(3);
   const [isLoading, setIsLoading] = useState(false);
   const [weather, setWeather] = useState<any>(null);
+
+  // Camera state persistence
+  const controlsRef = useRef<any>(null);
+  const cameraState = useRef<{ position: [number, number, number]; target: [number, number, number] } | null>(null);
 
   // Firefighter position tracking for CSV
 
@@ -192,10 +208,16 @@ const handleExportCsv = async () => {
   if (view === "movement") {
     return (
       <Movement
-        onBack={() => setView("app")}
+        onBack={(finalCameraState) => {
+          if (finalCameraState) {
+            cameraState.current = finalCameraState;
+          }
+          setView("app");
+        }}
         selectedFloor={selectedFloor}
         footprint={footprint}
         levels={buildingLevels}
+        initialCameraState={cameraState.current}
       />
     );
   }
@@ -275,7 +297,15 @@ return (
         <label>Floor View</label>
         <select
           value={selectedFloor ?? "all"}
-          onChange={(e) => setSelectedFloor(e.target.value === "all" ? null : parseInt(e.target.value))}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === "all") {
+              setSelectedFloor(null);
+              setSelectedId(null);
+            } else {
+              setSelectedFloor(parseInt(val));
+            }
+          }}
         >
           <option value="all">Overview (All Floors)</option>
           <option value="-1">Basement (B1)</option>
@@ -357,7 +387,7 @@ return (
     </div>
 
     {/* 3D Scene */}
-    <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
+    <Canvas camera={{ position: cameraState.current?.position ?? [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
       <ambientLight intensity={0.7} />
       <directionalLight position={[-10, 20, 10]} intensity={0.8} />
       <Building
@@ -369,7 +399,11 @@ return (
         footprint={footprint}
         levels={buildingLevels}
       />
-      <OrbitControls enablePan enableZoom enableRotate maxPolarAngle={Math.PI / 2} />
+      <OrbitControls 
+        ref={controlsRef} 
+        enablePan enableZoom enableRotate maxPolarAngle={Math.PI / 2} 
+      />
+      <CameraHandler controlsRef={controlsRef} initialTarget={cameraState.current?.target} />
     </Canvas>
 
     {/* Firefighter details panel */}
@@ -476,7 +510,17 @@ return (
           boxShadow: "0 4px 6px rgba(0,0,0,0.2)",
           transition: "transform 0.1s ease, box-shadow 0.1s ease",
         }}
-        onClick={() => setView("movement")}
+        onClick={() => {
+          if (controlsRef.current) {
+            const pos = controlsRef.current.object.position;
+            const target = controlsRef.current.target;
+            cameraState.current = {
+              position: [pos.x, pos.y, pos.z],
+              target: [target.x, target.y, target.z],
+            };
+          }
+          setView("movement");
+        }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
           (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 10px rgba(0,0,0,0.25)";

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import Building from './Building';
@@ -7,6 +8,17 @@ import { exportToCsv } from './utils/exportData';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+
+// Helper to set initial camera target without resetting it on every render
+function CameraHandler({ initialTarget, controlsRef }: { initialTarget?: [number, number, number], controlsRef: any }) {
+  useEffect(() => {
+    if (controlsRef.current && initialTarget) {
+      controlsRef.current.target.set(...initialTarget);
+      controlsRef.current.update();
+    }
+  }, []); // Run only on mount
+  return null;
+}
 
 type PathLineProps = { points: number[][]; color?: string };
 
@@ -26,11 +38,13 @@ export default function Movement({
   footprint,
   levels,
   selectedFloor,
+  initialCameraState,
 }: {
-  onBack: () => void;
+  onBack: (cameraState?: { position: [number, number, number]; target: [number, number, number] }) => void;
   footprint?: [number, number][];
   levels?: number;
   selectedFloor?: number | null;
+  initialCameraState?: { position: [number, number, number]; target: [number, number, number] } | null;
 }) {
   const snap = getSnapshot();
   const ids = Object.keys(snap).sort();
@@ -40,6 +54,7 @@ export default function Movement({
   );
   const [progress, setProgress] = useState(100);
   const [selectAll, setSelectAll] = useState(false);
+  const controlsRef = useRef<any>(null);
 
   const toggleId = (id: string) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
   const toggleSelectAll = () => {
@@ -60,7 +75,23 @@ export default function Movement({
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {/* Back button */}
-      <button style={{ position: 'absolute', left: 12, top: 12, zIndex: 20 }} onClick={onBack}>← Back</button>
+      <button 
+        style={{ position: 'absolute', left: 12, top: 12, zIndex: 20 }} 
+        onClick={() => {
+          let state;
+          if (controlsRef.current) {
+            const pos = controlsRef.current.object.position;
+            const target = controlsRef.current.target;
+            state = {
+              position: [pos.x, pos.y, pos.z] as [number, number, number],
+              target: [target.x, target.y, target.z] as [number, number, number],
+            };
+          }
+          onBack(state);
+        }}
+      >
+        ← Back
+      </button>
 
       {/* Checkbox list and UI */}
       <div style={{ position: 'absolute', left: 12, top: 56, zIndex: 20, background: 'rgba(0,0,0,0.6)', padding: 12, borderRadius: 8 }}>
@@ -88,18 +119,28 @@ export default function Movement({
         </div>
       </div>
 
-      <Canvas camera={{ position: [20, 20, 20], fov: 50, up: [0, 0, 1] }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#0f1724' }}>
+      <Canvas 
+        camera={{ 
+          position: initialCameraState?.position ?? [20, 20, 20], 
+          fov: 50, 
+          up: [0, 0, 1] 
+        }} 
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#0f1724' }}
+      >
         <ambientLight intensity={0.6} />
         <pointLight position={[50, 50, 50]} />
-        <axesHelper args={[5]} />
-        <OrbitControls enablePan enableRotate enableZoom enableDamping dampingFactor={0.05} />
+        <OrbitControls 
+          ref={controlsRef}
+          enablePan enableRotate enableZoom enableDamping dampingFactor={0.05} 
+        />
+        <CameraHandler controlsRef={controlsRef} initialTarget={initialCameraState?.target} />
 
         {/* Static building: floors load exactly as in layout, no offsets */}
         <Building
           firefighters={{}} // no icons
           onSelect={() => {}}
           config={{ scale: 1, swapYZ: false, offsetX: 0, offsetY: 0, offsetZ: 0 }}
-          selectedFloor={selectedFloor ?? null}
+          selectedFloor={null}
           focusedFloors={undefined} // no floor movement
           footprint={footprint}
           levels={levels}
