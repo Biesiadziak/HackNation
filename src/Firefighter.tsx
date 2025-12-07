@@ -80,11 +80,29 @@ export default function Firefighter({
       iconColor = "#ff4757"; // Red for Man Down
   }
 
+  // Visibility logic:
+  // 1. If a specific floor is selected, fade out firefighters on other floors
+  // 2. If not selected (Overview), show all with X-Ray vision (depthTest=false)
+  const isRelevantFloor = selectedFloor === null || firefighterFloor === selectedFloor;
+  const opacity = isRelevantFloor ? 1.0 : 0.4;
+  
+  // Enable depth test ONLY when we are focused on this specific floor.
+  // In overview mode (selectedFloor === null), we want X-Ray vision for everyone.
+  // On other floors, we want X-Ray vision (ghosts).
+  const depthTest = selectedFloor !== null && firefighterFloor === selectedFloor;
+  
   // Smoothly interpolate position with delta-time based lerp
   useFrame((state, delta) => {
     if (ref.current) {
       const targetPos = new THREE.Vector3(x, y, adjustedZ);
       ref.current.position.lerp(targetPos, 1 - Math.pow(0.001, delta));
+      
+      // Update opacity
+      ref.current.material.opacity = THREE.MathUtils.lerp(
+        ref.current.material.opacity,
+        opacity,
+        delta * 5
+      );
     }
     // Animate hover ring - make it face the camera (billboard effect)
     if (ringRef.current) {
@@ -100,6 +118,9 @@ export default function Firefighter({
         const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.1;
         ringRef.current.scale.setScalar(pulse);
       }
+      
+      // Update ring opacity
+      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = isSelected ? 0.8 : (opacity * 0.5);
     }
   });
 
@@ -118,7 +139,7 @@ export default function Firefighter({
           transparent 
           opacity={0.8}
           side={THREE.DoubleSide}
-          depthTest={false}
+          depthTest={depthTest} // Enable depth test only for relevant floor
         />
       </mesh>
 
@@ -145,7 +166,8 @@ export default function Firefighter({
           map={texture} 
           color={iconColor}
           transparent 
-          depthTest={false}
+          opacity={opacity}
+          depthTest={depthTest} // Enable depth test only for relevant floor
           depthWrite={false}
         />
       </sprite>
