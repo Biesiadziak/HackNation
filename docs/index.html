@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackNation System Showcase</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>HackNation System</h1>
+            <p>A Journey from Concept to Reality</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="intro">
+            <h2>About The Project</h2>
+            <p>Welcome to the showcase of our 3D localization and visualization system. This project aims to provide real-time tracking and environmental awareness for emergency responders. Below is the story of how this system came to life, from the first lines of code to a fully functional 3D interface.</p>
+        </section>
+
+        <section id="phase1">
+            <h2>Phase 1: The Foundation</h2>
+            <p>Every great project starts with a blank canvas. Our first build was humble—a simple 3D view populated with randomly spaced balls to establish our coordinate system and test the basic rendering engine.</p>
+            <div class="gallery-item">
+                <img src="pics/screen_site_first_build.png" alt="First Build Screen">
+                <div class="caption">The initial 3D view: Randomly spaced spheres setting the stage for what was to come.</div>
+            </div>
+        </section>
+
+        <section id="phase2">
+            <h2>Phase 2: Entering the Third Dimension</h2>
+            <p>The core of our project is 3D localization. We began rendering buildings and structures in 3D, allowing for vertical tracking—crucial for multi-story operations.</p>
+            <div class="gallery-item">
+                <img src="pics/screen_site_3D_localisation.png" alt="3D Localisation">
+                <div class="caption">3D Localization: Adding depth and verticality to the tracking.</div>
+            </div>
+        </section>
+
+        <section id="phase3">
+            <h2>Phase 3: Building the UI and Agents</h2>
+            <p>With the 3D world established, we focused on the interface. We introduced firefighter icons and a dashboard displaying critical data such as BPM and status, visualizing the agents within the system.</p>
+            <div class="gallery-item">
+                <img src="pics/screen_site_without_building.png" alt="Site without building">
+                <div class="caption">Early interface showing firefighter icons and vital statistics like BPM and state.</div>
+            </div>
+        </section>
+
+        <section id="phase4">
+            <h2>Phase 4: Tracking Movement</h2>
+            <p>Static points are useful, but movement tells a story. We implemented trajectory tracking to visualize the path taken by agents over time.</p>
+            <div class="gallery-item">
+                <img src="pics/screen_site_trajectories.png" alt="Trajectories">
+                <div class="caption">Early trajectory testing.</div>
+            </div>
+            <div class="gallery-item">
+                <img src="pics/screen_site_trajectories_final.png" alt="Final Trajectories">
+                <div class="caption">Refined trajectories: Smooth and informative paths.</div>
+            </div>
+        </section>
+
+        <section id="phase5">
+            <h2>Phase 5: Polishing the Experience</h2>
+            <p>As we neared completion, we focused on the user interface, ensuring that critical information is easily accessible without cluttering the view.</p>
+            <div class="gallery-item">
+                <img src="pics/screen_site_almost_finished.png" alt="Almost Finished">
+                <div class="caption">The near-final interface: Clean, functional, and powerful.</div>
+            </div>
+        </section>
+
+        <section id="technical">
+            <h2>Under the Hood</h2>
+            <p>Our system is built on a robust architecture designed for reliability and speed. Here's a look at how the components interact.</p>
+            <div class="gallery-item tech-diagram">
+                <img src="pics/techincal_diagram.png" alt="Technical Diagram">
+                <div class="caption">System Architecture Diagram.</div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 HackNation Team. Built with passion.</p>
+    </footer>
+
+    <div id="lightbox" class="lightbox">
+        <img id="lightbox-img" src="" alt="Full screen image">
+    </div>
+
+    <script>
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const images = document.querySelectorAll('.gallery-item img');
+
+        images.forEach(img => {
+            img.addEventListener('click', e => {
+                lightboxImg.src = e.target.src;
+                lightbox.style.display = 'flex';
+            });
+        });
+
+        lightbox.addEventListener('click', () => {
+            lightbox.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
