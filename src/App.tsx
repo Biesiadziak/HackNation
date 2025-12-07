@@ -360,7 +360,6 @@ return (
     <Canvas camera={{ position: [20, 30, 40], fov: 50, up: [0, 0, 1] }}>
       <ambientLight intensity={0.7} />
       <directionalLight position={[-10, 20, 10]} intensity={0.8} />
-      <axesHelper args={[5]} />
       <Building
         firefighters={firefighters}
         onSelect={setSelectedId}
