@@ -67,10 +67,6 @@ export default function Firefighter({
   // Add offset so firefighter appears above the floor, not inside it
   const adjustedZ = baseZ + zOffset;
 
-  const roll = Math.abs(data.imu?.orientation?.roll ?? 0);
-  const pitch = Math.abs(data.imu?.orientation?.pitch ?? 0);
-  const isCrawling = roll > 45 || pitch > 45;
-  
   // Man Down Logic
   const heartRate = data.vitals?.heart_rate_bpm;
   const isCriticalHR = heartRate > 120 || heartRate < 40;
@@ -79,9 +75,6 @@ export default function Firefighter({
   const isManDown = isCriticalHR || isStationary;
   
   let iconColor = "#ffffff";
-  if (isCrawling) {
-      iconColor = "#aaaaaa"; // Gray for crawling
-  }
   
   if (isManDown) {
       iconColor = "#ff4757"; // Red for Man Down

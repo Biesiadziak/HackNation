@@ -305,9 +305,6 @@ return (
             Object.values(firefighters).map((ff: any) => {
               const isSelected = selectedId === ff.firefighter.id;
               const heartRate = ff.vitals?.heart_rate_bpm;
-              const roll = Math.abs(ff.imu?.orientation?.roll ?? 0);
-              const pitch = Math.abs(ff.imu?.orientation?.pitch ?? 0);
-              const isCrawling = roll > 45 || pitch > 45;
               
               // Man Down Logic: Stationary for > 30s OR Critical Heart Rate
               const timeSinceMove = Date.now() - (ff.lastMoveTime ?? Date.now());
@@ -316,7 +313,7 @@ return (
               const isManDown = isStationary || isCriticalHR;
               
               // Alert logic: Man Down takes precedence
-              const itemClass = isManDown ? "alert" : (isCrawling ? "fallen" : "");
+              const itemClass = isManDown ? "alert" : "";
 
               const rawZ = typeof ff.z === "number" ? ff.z : ff.position?.z ?? 0;
               const z = rawZ * config.scale + config.offsetZ;
@@ -336,7 +333,7 @@ return (
                   </div>
                   <div className="ff-stats">
                     <span className="ff-heart">❤️ {heartRate ?? "--"}</span>
-                    <span className="ff-state">{ff.vitals?.motion_state ?? "--"}</span>
+                    <span className="ff-state">{isManDown ? "MAN DOWN" : (ff.vitals?.motion_state ?? "--")}</span>
                   </div>
                   <div className="ff-scba">
                     🛡️ {ff.scba?.cylinder_pressure_bar?.toFixed(0) ?? "--"} bar
@@ -387,9 +384,12 @@ return (
         <p>
           <strong>Heart Rate:</strong> <span>{selected.vitals?.heart_rate_bpm} bpm</span>
         </p>
-        <p>
-          <strong>State:</strong> <span>{selected.vitals?.motion_state}</span>
-        </p>
+        {/* Hide normal state if Man Down */}
+        {!((selected.vitals?.heart_rate_bpm > 120 || selected.vitals?.heart_rate_bpm < 40) || (Date.now() - (selected.lastMoveTime ?? Date.now()) > 30000)) && (
+          <p>
+            <strong>State:</strong> <span>{selected.vitals?.motion_state}</span>
+          </p>
+        )}
         <p>
           <strong>SCBA:</strong>{" "}
           <span>
@@ -402,10 +402,6 @@ return (
         {/* Status Indicators */}
         {((selected.vitals?.heart_rate_bpm > 120 || selected.vitals?.heart_rate_bpm < 40) || (Date.now() - (selected.lastMoveTime ?? Date.now()) > 30000)) && (
              <p style={{ color: "#ff4757", fontWeight: "bold", margin: "5px 0" }}>🚨 MAN DOWN / CRITICAL</p>
-        )}
-        {!((selected.vitals?.heart_rate_bpm > 120 || selected.vitals?.heart_rate_bpm < 40) || (Date.now() - (selected.lastMoveTime ?? Date.now()) > 30000)) && 
-         (Math.abs(selected.imu?.orientation?.pitch ?? 0) > 45 || Math.abs(selected.imu?.orientation?.roll ?? 0) > 45) && (
-          <p style={{ color: "#aaaaaa", fontWeight: "bold", margin: "5px 0" }}>ℹ️ CRAWLING / LOW PROFILE</p>
         )}
         <button onClick={() => setSelectedId(null)}>Close</button>
       </div>

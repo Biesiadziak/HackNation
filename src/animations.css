@@ -9,8 +9,3 @@
   border-left: 3px solid #ff4757;
   animation: blink-red 1.5s infinite ease-in-out;
 }
-
-.firefighter-list-item.fallen {
-  border-left: 3px solid #aaaaaa;
-  background-color: rgba(170, 170, 170, 0.1);
-}
