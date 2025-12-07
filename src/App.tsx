@@ -174,12 +174,44 @@ export default function App() {
     }
   }, [selected, config.scale, config.offsetZ, buildingLevels]);
 
+  // Focus camera on selected firefighter
+  useEffect(() => {
+    if (selectedId && firefighters[selectedId] && controlsRef.current) {
+      const ff = firefighters[selectedId];
+      let x = (ff.x ?? ff.position?.x ?? 0) * config.scale + config.offsetX;
+      let y = (ff.y ?? ff.position?.y ?? 0) * config.scale + config.offsetY;
+      let z = (ff.z ?? ff.position?.z ?? 0) * config.scale + config.offsetZ;
+      
+      if (config.swapYZ) {
+        const temp = y;
+        y = z;
+        z = temp;
+      }
+
+      controlsRef.current.target.set(x, y, z);
+      controlsRef.current.update();
+    }
+  }, [selectedId]);
+
 const firefighterPositions = useRef<Record<string, { x: number; y: number; z: number }[]>>({});
+
+// Refs for interval access
+const firefightersRef = useRef(firefighters);
+const alertsRef = useRef(alerts);
+const selectedIdRef = useRef(selectedId);
+
+useEffect(() => { firefightersRef.current = firefighters; }, [firefighters]);
+useEffect(() => { alertsRef.current = alerts; }, [alerts]);
+useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
 useEffect(() => {
   const configRef = { scale: config.scale, swapYZ: config.swapYZ, offsetX: config.offsetX, offsetY: config.offsetY, offsetZ: config.offsetZ };
   const interval = setInterval(() => {
-    Object.values(firefighters).forEach((ff: any) => {
+    const now = Date.now();
+    const ffs = firefightersRef.current;
+    const currentAlerts = alertsRef.current;
+
+    Object.values(ffs).forEach((ff: any) => {
       const id = ff.firefighter?.id;
       if (!id) return;
       let x = (ff.x ?? ff.position?.x ?? 0) * configRef.scale + configRef.offsetX;
@@ -190,10 +222,47 @@ useEffect(() => {
       if (!firefighterPositions.current[id]) firefighterPositions.current[id] = [];
       firefighterPositions.current[id].push({ x, y, z });
       recordPosition(id, [x, y, z]); // optional if you want to sync with state
+
+      // Check for Man Down
+      const timeSinceMove = now - (ff.lastMoveTime ?? now);
+      const isStationary = timeSinceMove > 30000; // 30s
+      const heartRate = ff.vitals?.heart_rate_bpm;
+      const isCriticalHR = heartRate > 120 || heartRate < 40;
+      
+      if (isStationary || isCriticalHR) {
+         // Check if alert already exists
+         const exists = currentAlerts.some(a => a.firefighter.id === id && a.alert_type === 'man_down');
+         
+         if (!exists) {
+             const newAlert: Alert = {
+                 id: `local-${id}-${now}`,
+                 type: 'alert',
+                 timestamp: new Date().toISOString(),
+                 alert_type: 'man_down',
+                 severity: 'critical',
+                 firefighter: ff.firefighter,
+                 details: {
+                     reason: isStationary ? 'No motion detected' : 'Critical Heart Rate',
+                     heart_rate: heartRate
+                 }
+             };
+             
+             setAlerts(prev => {
+                 // Double check inside setter to be safe
+                 if (prev.some(a => a.firefighter.id === id && a.alert_type === 'man_down')) return prev;
+                 return [newAlert, ...prev].slice(0, 2);
+             });
+             
+             // Trigger focus if not already selected
+             if (selectedIdRef.current !== id) {
+                 setSelectedId(id);
+             }
+         }
+      }
     });
   }, 1000);
   return () => clearInterval(interval);
-}, [firefighters, config]);
+}, [config]);
 
 // --- CSV Export ---
 const handleExportCsv = async () => {
